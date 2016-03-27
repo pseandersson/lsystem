@@ -48,9 +48,11 @@ ignore = '+-F'
 #}
 #
 instr ='ABC[DE][SG[HI[JK]L]MNO]'
-#instr ='baaaaaa'
+instr ='baaaaaa'
 rules = {
-'A':'X',
+'b<a':'b',
+'b<b':'X',
+'b':'aaab'
 }
 i = 3
 mask = int('0xFFFF',16)
@@ -60,22 +62,25 @@ print (1<<0), i,(mask&~2)&i
 print ls.parse_rule(instr,2,'a>b')
 print '---------------------'
 #for g in range(0,generations):
-ltree = ls.LNode(instr)
-lrule = ls.LNode('BC')
-lrule2 = ls.LNode('G[HIL]M')
+ltree = ls.LTree()
+ltree << instr
+lrule = ls.LTree()
+lrule << 'BC'
+lrule = lrule.chop()
+lrule2 = ls.LTree() << 'G[HIL]M'
 ltree.print_tree()
 lrule.print_tree()
-#lrule2.print_tree()
+lrule2.print_tree()
 
-print instr
-print lrule
-l0 = ltree.getNodeAt(9)
+#print instr
+#print lrule
+#l0 = ltree.getNodeAt(9)
 #r0 = lrule.getNodeAt(0)
 #l1 = l0.next()
 #print l1.print_tree()
 #print lrule2.print_tree()
-if l0.match(lrule2):
-	print 'Equal'
+#if l0.match(lrule2):
+#	print 'Equal'
 #if l0!=None:
 #	print lrule.depth
 #	for i in range(0,lrule.depth):
@@ -89,7 +94,7 @@ if l0.match(lrule2):
 
 
 
-iostr = ls.resolve_instructions_by_tree(instr, rules,2)
+iostr = ls.resolve_instructions_by_tree(instr, rules,4)
 print iostr
 #turtle = t.turtle(instr,X0,R0,r0,stepsize,delta,dr)
 #draw_turtle(turtle)

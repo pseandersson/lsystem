@@ -48,11 +48,10 @@ ignore = '+-F'
 #}
 #
 instr ='ABC[DE][SG[HI[JK]L]MNO]'
-instr ='baaaaaa'
+#instr ='bbbaaaaa'
 rules = {
-'b<a':'b',
+'BC<S>G[HIL]M':'',
 'b<b':'X',
-'b':'aaab'
 }
 i = 3
 mask = int('0xFFFF',16)
@@ -93,9 +92,9 @@ lrule2.print_tree()
 #	print 'Error'
 
 
-
-iostr = ls.resolve_instructions_by_tree(instr, rules,4)
-print iostr
+for g in range(0,5):
+	iostr = ls.resolve_instructions_by_tree(instr, rules,g)
+	print iostr
 #turtle = t.turtle(instr,X0,R0,r0,stepsize,delta,dr)
 #draw_turtle(turtle)
 

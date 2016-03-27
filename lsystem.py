@@ -495,8 +495,8 @@ def parse_rule_tree(node,rule,ignore=''):
 
 	key = rule[less_pos:(less_pos+var_length)]
 
-	if flag&(LOOK_BEFORE|LOOK_AFTER)==0:
-		return node.val==key
+	if node.val!=key:
+		return False
 
 	# Check if condition is met
 	if flag&LOOK_BEFORE:

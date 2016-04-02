@@ -1022,16 +1022,14 @@ def resolve_instructions_by_tree(instr,rules,nmax,figures=dict()):
 
 	for law in rules.keys():
 		law_book.append(Rule(law, rules[law]))
+	itree = LTree();
 
-	itree = LTree(instr)
+	if type(instr)==type(LTree()):
+		itree = instr
+	else:
+		itree << instr
 
 	for n in range(1,nmax+1):
-		#oldstr = instr
-		#itree = LNode(oldstr)
-		#instr = ''
-		#sLen = len(oldstr)
-		#i = 0
-		#oi = 0
 		node = itree.chop()
 		while True:
 			new_str = None
@@ -1046,25 +1044,14 @@ def resolve_instructions_by_tree(instr,rules,nmax,figures=dict()):
 			else:
 				itree << node.to_string()
 
-#			rule_exists, rkey = tree_lookup(node, rules)
-
-#			if rule_exists:
-#				if type(rules[rkey])==type(str()):
-#					itree << rules[rkey]
-#				elif type(rules[rkey])==type(dict()):
-#					itree << resolve_prob_rule(rules[rkey])
-#
-#			else:
-#				itree << node.val
-
 			try:
 				node = node.next()
 			except StopIteration:
 				break
 	#instr = itree.to_string()
 	#print 'n=',n,', ', instr
-	#if (len(figures.keys())>0):
-	#	instr = resolve_instructions(instr,figures,1);
+	if (len(figures.keys())>0):
+		itree = resolve_instructions_tree(itree,figures,1);
 	return itree
 
 

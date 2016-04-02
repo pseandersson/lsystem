@@ -1051,7 +1051,7 @@ def resolve_instructions_by_tree(instr,rules,nmax,figures=dict()):
 	#instr = itree.to_string()
 	#print 'n=',n,', ', instr
 	if (len(figures.keys())>0):
-		itree = resolve_instructions_tree(itree,figures,1);
+		itree = resolve_instructions_by_tree(itree,figures,1);
 	return itree
 
 

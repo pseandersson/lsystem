@@ -128,3 +128,97 @@ def turtle(instr,X0,R0,r0,stepsize, delta,dr):
 
 
 	return vertex_set,polygons
+
+def turtle_tree(itree,X0,R0,r0,istepsize, idelta,idr):
+	stepsize = istepsize
+	delta = idelta
+	dr = idr
+	radius = 1.*r0
+	pos = np.array(X0[0:3],dtype=float)
+	rot = np.array(R0[:,:],dtype=float)
+	new_line = True
+	vertex_set = []
+	vertices = None
+	max_values = -100000*np.ones([1,3])
+	min_values = 100000*np.ones([1,3])
+	state = []
+	polygons = []
+	cur_polys = []
+	poly = None
+
+	node = itree.first()
+
+	while True:
+		if node.hasArguments():
+			stepsize = node.getArgument(0)
+			delta = node.getArgument(0)
+			dr = node.getArgument(0)
+		else:
+			stepsize = istepsize
+			delta = idelta
+			dr = idr
+
+		if node=='F':
+			if new_line:
+				vertex_set.append([])
+				vertices = vertex_set[-1]
+				vertices.extend(pos[:])
+				new_line = False
+	
+			pos += stepsize*rot[:,0]
+			vertices.extend(pos[:])
+
+		elif node=='f':
+			pos += stepsize*rot[:,0]
+			if poly==None:
+				new_line = True
+			else:
+				poly.extend(pos[:])
+		elif node=='+':
+			rot = rot.dot(getHeadingRotMatrix(delta))
+		elif node=='-':
+			rot = rot.dot(getHeadingRotMatrix(-delta))
+		elif node=='&':
+			rot = rot.dot(getPitchRotMatrix(delta))
+		elif node=='^':
+			rot = rot.dot(getPitchRotMatrix(-delta))
+		elif node=='\\':
+			rot = rot.dot(getRollRotMatrix(delta))
+		elif node=='/':
+			rot = rot.dot(getRollRotMatrix(-delta))
+		elif node=='|':
+			rot = rot.dot(getHeadingRotMatrix(180))
+		elif node=='[':
+			new_line = True
+			lpos = np.array(pos[:],dtype=float)
+			lrot = np.array(rot[:,:],dtype=float)
+			state.append((lpos,lrot))
+		elif node==']':
+			new_line = True
+			pos,rot = state.pop()
+		elif node=='\'':
+			radius += dr
+		elif node=='!':
+			radius -= dr
+		elif node=='{':
+			if poly!=None:
+				cur_polys.append(poly)
+			lpos = np.array(pos[:],dtype=float)
+			lrot = np.array(rot[:,:],dtype=float)
+			state.append((lpos,lrot))
+			polygons.append([])
+			poly = polygons[-1]
+			poly.extend(pos[:])
+		elif node=='}':
+			if (len(cur_polys)>0):
+				poly = cur_polys.pop()
+			else:
+				poly = None
+			pos,rot = state.pop()
+
+		try:
+			node = node.next()
+		except StopIteration:
+			break
+
+	return vertex_set,polygons

@@ -3,7 +3,8 @@
 # Copyright (C) 2016 Patrik Andersson
 # All rights reserved
 # --------------------
-
+import string
+import types
 import numpy as np
 from numpy.random import random as rand
 
@@ -13,6 +14,114 @@ LOOK_AFTER      = (1<<2)
 BRACKETS        = (1<<3)
 BRACKET_ERROR   = (1<<4)
 FUNC_DEF        = (1<<5)
+
+DETERMINISTIC_RULE = 0
+STOCHASTIC_RULE    = (1<<0)
+
+
+"""Global functions to resolve mathematical expression
+   such as: 2((5e-1-2)+1)/3+2*(4)"""
+def calculate(instr):
+	instr += ' ' # Add end padding to simplify algo
+	nums = '0123456789.'
+	math_op = '+-*/^v'
+	mem_val = None
+	rvalue = 0.0
+	last_op = ''
+	val_str = ''
+	bracket_start = None
+	bracket_val = None
+	bracket_count = 0
+	
+	i = 0
+	
+	while i < len(instr):
+		lvalue = None
+		cur_op = None
+
+		# check if we are not in a bracket
+		# context
+		if bracket_count==0:
+			# Add numerical value to the
+			# value string
+			if instr[i] in nums:
+				val_str += instr[i]
+			# if a minus sign present and
+			# value string is empty use it
+			# as a sign indicator
+			elif instr[i]=='-' and \
+			 (val_str=='' or val_str[-1]=='e') and bracket_val==None:
+				if bracket_count==0:
+					val_str += instr[i]
+			elif instr[i]=='e' and \
+				 val_str!='' and\
+				 val_str[-1]!='-':
+				 val_str += instr[i]
+			# Otherwise try to resolve the value
+			else:
+				if len(val_str)>0:
+					try:
+						lvalue = string.atof(val_str)
+						val_str = ''
+					except ValueError:
+						pass
+				# bracket values are returned in the
+				# next loop of the string so it has
+				# correspondance to an operator
+				elif bracket_val!=None:
+					lvalue = bracket_val
+					bracket_val = None
+
+				# Store operatator 
+				if instr[i] in math_op:
+					cur_op=instr[i]
+				# If a bracket context is
+				# at beginning, enable lazy brackets
+				# so it is possible to write
+				# 2(3-1) = 4
+				if instr[i] in '(':
+					if lvalue!=None and cur_op==None:
+						cur_op = '*'
+					bracket_count+=1
+					bracket_start=i+1
+		else:
+			#end bracket context
+			if instr[i] in ')':
+				bracket_count-=1
+				if bracket_count==0:
+					bracket_val =\
+					calculate(instr[bracket_start:i])
+			elif instr[i] in '(':
+				bracket_count+=1
+
+		# Do math operations
+		if mem_val != None:
+			if last_op in '+-' and lvalue!=None:
+				rvalue += mem_val
+				if last_op=='+':
+					mem_val = lvalue
+				else:
+					mem_val = -lvalue
+			elif last_op in '*/' and lvalue!=None:
+				if last_op =='*':
+					mem_val *=lvalue
+				else:
+					mem_val /= lvalue
+			elif last_op in '^v' and lvalue!=None:
+				if last_op =='^':
+					mem_val = max(mem_val,lvalue)
+				else:
+					mem_val = min(mem_val,lvalue)
+		elif lvalue!=None:
+			mem_val = lvalue
+
+		if cur_op!=None:
+			last_op = cur_op
+		i+=1
+	if mem_val!=None:
+		rvalue += mem_val
+	return rvalue
+
 
 class LNode(object):
 	"""LNode is a node in a tree graph representing one command in the Liedermayer system.
@@ -29,7 +138,41 @@ class LNode(object):
 		self.descendants = 0
 		self.depth = 0
 		self.val = val
+		self.arguments = []
 		self.updateMaxDepth(1)
+
+	def __eq__(self, b):
+		if type(b)==types.StringType:
+			return self.val==b
+		else:
+			return NotImplemented
+
+	"""setArguments of node"""
+	def setArguments(self, args):
+		if type(args)==type(str()):
+			self.arguments = args[1:-1].split(',')
+		elif type(args)==type(dict()):
+			for i in range(0,self.getArgumentCount()):
+				arg_expr = self.getArgument(i)
+				for key, value in args.items():
+					arg_expr = arg_expr.replace(key,'('+value+')')
+				self.arguments[i]= str(calculate(arg_expr))
+
+	"""Evaluate if node has any arguments"""
+	def hasArguments(self):
+		return len(self.arguments)>0
+
+	"""getArgument at position index"""
+	def getArgument(self, index):
+		return self.arguments[index]
+
+	"""Returns number of available arguments"""
+	def getArgumentCount(self):
+		return len(self.arguments)
+
+	"""Returns all arguments of node"""
+	def getArguments(self):
+		return arguments
 
 	"""Update the depth for the nodes predecessor"""
 	def updateMaxDepth(self,depth):
@@ -68,31 +211,6 @@ class LNode(object):
 	def isRoot(self):
 		return self.predecessor==None
 
-#	def create_tree(self,instr):
-#		slen = len(instr)
-#		states = []
-#		node = self
-#		new_branch = False
-#		i = 0
-#		while i <slen:
-#			if instr[i]=='[':
-#				states.append(node)
-#				node = node.addChild(instr[i],i)
-#				new_branch = True
-#			elif instr[i]==']':
-#				node = node.addChild(instr[i],i)
-#				node = states.pop()
-#			else:
-#				key = instr[i]
-#				oi = i
-#				if i+1 < slen:
-#					if instr[i+1]=='_':
-#						key += instr[i+1:i+3]
-#						i+=2
-#
-#				node = node.addChild(key, oi)
-#
-#			i+=1
 	"""Compare two different LNode-system to see if they match"""
 	def match(self, b):
 		if type(self)==type(b):
@@ -154,6 +272,7 @@ class LNode(object):
 				return self.predecessor.up()
 			else:
 				return self.predecessor
+
 	"""Navigate downwards in the tree. 
 	   If last_child is given, it will go down
 	   in the sibling node to last_child which is
@@ -219,31 +338,20 @@ class LNode(object):
 				else:
 					return self.next_at_parent()
 
-
-#	def getNodeAt(self,pos):
-#		if self.pos == pos:
-#			return self
-#		elif pos < self.pos:
-#			return self.predecessor.getNodeAt(pos)
-#		else:
-#			if len(self.childs)>1:
-#				for i in range(0,len(self.childs)-1):
-#					j =i+1
-#					if pos < self.childs[j].pos:
-#						return self.childs[i].getNodeAt(pos)
-#				return self.childs[-1].getNodeAt(pos)
-#
-#			elif len(self.childs)>0:
-#				return self.childs[0].getNodeAt(pos)
-#
-#			return None
-
 	"""Returns the string, building up the node-scheme"""
-	def to_string(self):
+	def to_string(self,traverse=False):
 		tstr = self.val
-
-		for node in self.childs:
-			tstr += str(node.to_string())
+		if self.hasArguments():
+			tstr += '('
+			for i in range(0,self.getArgumentCount()):
+				tstr += self.getArgument(i)
+				if i < self.getArgumentCount()-1:
+					tstr+=','
+				else:
+					tstr+=')'
+		if traverse:
+			for node in self.childs:
+				tstr += str(node.to_string(traverse))
 		return tstr
 
 	"""Display the node tree"""
@@ -259,10 +367,13 @@ class LTree(object):
 	After the tree has been created one can access the nodes by chop()
 	function. The chop()-function gives access to the nodes and remove
 	their relationship to LTree so new trees can grow up there"""
-	def __init__(self):
+	def __init__(self,initstr=None):
 		self.states = []
 		self.root = LNode()
 		self.node = self.root
+
+		if type(initstr)==type(str()):
+			self.push(initstr)
 
 	"""Push strings into the tree structure"""
 	def __lshift__(self,instr):
@@ -284,13 +395,36 @@ class LTree(object):
 		self.states = []
 		return tree
 
+	def first(self):
+		tree = None
+		if len(self.root.childs)==1:
+			tree = self.root.childs[0]
+			tree.predecessor=None
+		else:
+			tree = self.root
+		return tree
+
 	"""Push back literals to construct the tree"""
 	def push(self, instr):
 		slen = len(instr)
 		i = 0
-
+		bracket_start_pos = None
+		bracket_count = 0
 		while i <slen:
-			if instr[i]=='[':
+			if instr[i]=='(':
+				bracket_start_pos=i
+				bracket_count += 1
+				i +=1
+				while i < slen:
+					if instr[i]=='(':
+						bracket_count+=1
+					elif instr[i]==')':
+						bracket_count-=1
+					if bracket_count==0:
+						break
+					i+=1
+				self.node.setArguments(instr[bracket_start_pos:i+1])
+			elif instr[i]=='[':
 				self.states.append(self.node)
 				self.node = self.node.addChild(instr[i])
 				new_branch = True
@@ -315,11 +449,287 @@ class LTree(object):
 			self.root.childs[0].print_tree()
 		else:
 			self.root.print_tree()
+
 	def to_string(self):
 		if len(self.root.childs)==1:
-			return self.root.childs[0].to_string()
+			return self.root.childs[0].to_string(True)
 		else:
-			return self.root.to_string()
+			return self.root.to_string(True)
+
+class Rule(object):
+	def __init__(self,initstr, consequences):
+		self.flag = 0
+		self.key = None
+		self.less = None
+		self.greater = None
+		self.consequences = None
+		self.prob_rules = []
+		self.cs = None # Cummulative Sum
+		self.cmp_type = None
+		self.fn_str = None
+		self.cmp_str = None
+
+		self.setup_case(initstr)
+		self.setup_consequences(consequences)
+
+	def setup_case(self, initstr):
+		i = 0
+		less_pos=None
+		great_pos=None
+		bracket_count = 0
+		commas = []
+		while i < len(initstr):
+			if initstr[i]=='<':
+				self.flag |= LOOK_BEFORE
+				less_pos = i+1
+			elif initstr[i]=='>':
+				self.flag |= LOOK_AFTER
+				great_pos = i
+			elif initstr[i]=='(':
+				self.flag |= BRACKETS
+				self.flag |= BRACKET_ERROR
+				bracket_count+=1
+			elif initstr[i]==')':
+				self.flag &=~BRACKET_ERROR
+				bracket_count-=1
+			elif initstr[i]==':':
+				self.flag |= FUNC_DEF
+				break;
+			elif initstr[i]==',':
+				commas.append(i)
+			i+=1
+
+		key_string = None
+
+		if self.flag&FUNC_DEF:
+			key_string = initstr[0:i]
+		else:
+			key_string = initstr
+
+		self.key = (LTree() << key_string[less_pos:great_pos]).chop()
+		
+		if self.flag&LOOK_BEFORE:
+			self.less    = (LTree() << key_string[0:less_pos-1]).chop()
+	
+		if self.flag&LOOK_AFTER:
+			self.greater = (LTree() << key_string[great_pos+1:]).chop()
+	
+		if self.flag&FUNC_DEF:
+			self.setup_func(initstr[(i+1):])
+
+	def setup_func(self, funcstr):
+		self.cmp_type = ''
+		if '<=' in funcstr:
+			self.cmp_type='<='
+		elif '>=' in funcstr:
+			self.cmp_type ='>='
+		elif '==' in funcstr:
+			self.cmp_type = '=='
+		elif '!=' in funcstr:
+			self.cmp_type = '!='
+		elif '<' in funcstr:
+			self.cmp_type='<'
+		elif '>' in funcstr:
+			self.cmp_type='>'
+
+		pos = funcstr.find(self.cmp_type)
+		self.fn_str = funcstr[0:pos]
+		self.cmp_str = funcstr[pos+len(self.cmp_type):]
+
+	def setup_consequences(self, consequences):
+		if type(consequences)==type(dict()):
+			self.type = STOCHASTIC_RULE
+			weight = 0.;
+			itr = iter(consequences)
+			
+			self.cs = [0.]
+			try:
+				while True:
+					rule = itr.next();
+					prob = consequences[rule]
+					self.cs.append(prob+self.cs[-1])
+					self.prob_rules.append(rule)
+			except StopIteration:
+				pass
+			
+			self.cs = np.array(self.cs,dtype=float)
+			self.cs /= self.cs.max()
+		else:
+			self.prob_rules.append(consequences)
+
+	"""Test if the node follows the rule. Returns True if it does,
+	   otherwise False."""
+	def trial(self,node):
+		bf_node = None
+		af_node = None
+		
+		if not self.simple_rule_match(self.key,node ):
+			return False, None
+
+		if self.flag&LOOK_BEFORE:
+			lnode = node
+			try:
+				for i in range(self.less.depth):
+					lnode = lnode.up()
+
+				if not self.match(lnode, self.less):
+					return False, None
+				else:
+					bf_node =lnode
+			except StopIteration:
+				return False, None
+
+		if self.flag&LOOK_AFTER:
+			try:
+				if self.match(node.next(), self.greater):
+					af_node = node.next()
+				else:
+					return False, None
+			except StopIteration:
+				return False, None
+
+		# Create argument list
+		arglist = dict()
+		self.parse_arguments(self.key,node,arglist)
+		
+		if bf_node:
+			self.match(bf_node, self.less, arglist)
+		if af_node:
+			self.match(af_node, self.greater, arglist)
+
+		state = True
+
+		# Evaluate function
+		if self.flag&FUNC_DEF:
+			# Might be useful in the future
+			#if self.key.getArgumentCount()!=\
+			#	node.getArgumentCount():
+			#	return False
+
+			fn_str = self.fn_str
+			cmp_str = self.cmp_str
+
+			for i in range(self.key.getArgumentCount()):
+				fn_str = fn_str.replace(self.key.getArgument(i),\
+										node.getArgument(i))
+				cmp_str = cmp_str.replace(self.key.getArgument(i),\
+										node.getArgument(i))
+
+			if self.cmp_type=='<=':
+				state = calculate(fn_str) <= calculate(cmp_str)
+			elif self.cmp_type=='>=':
+				state = calculate(fn_str) >= calculate(cmp_str)
+			elif self.cmp_type=='==':
+				state = calculate(fn_str) == calculate(cmp_str)
+			elif self.cmp_type=='!=':
+				state = calculate(fn_str) != calculate(cmp_str)
+			elif self.cmp_type=='<':
+				state = calculate(fn_str) < calculate(cmp_str)
+			elif self.cmp_type=='>':
+				state = calculate(fn_str) > calculate(cmp_str)
+
+		return state, arglist
+
+	def return_rule(self,arglist=None,rule_id=1):
+		rule = LTree(self.prob_rules[rule_id-1])
+		if type(arglist)==type(dict()):
+			node = rule.first();
+			while True:
+				node.setArguments(arglist)
+				try:
+					node= node.next()
+				except StopIteration:
+					break
+			return rule.to_string()
+		else:
+			return rule.to_string()
+	"""Test if the string follows the given rule, if it does
+	   then it returns the replacement string otherwise None."""
+
+	def try_case(self, case_str ):
+		success, arglist = self.trial(case_str)
+		if success:
+			if self.cs==None:
+				return self.return_rule(arglist)
+			else:
+				r = rand()
+				for k in range(0,len(self.cs)):
+					if r < self.cs[k]:
+						return self.return_rule(arglist, k)
+		else:
+			return None
+
+	def simple_rule_match(self,a,b):
+		if a.val==b.val:
+			if a.getArgumentCount()==b.getArgumentCount():
+				return True
+		return False
+
+	"""Internal method to parse arguments"""
+	def parse_arguments(self, a, b, d):
+		for i in range(0,a.getArgumentCount()):
+			if not d.has_key(a.getArgument(i)):
+				d[a.getArgument(i)] = b.getArgument(i)
+			else:
+				print 'Argument error'
+
+	"""Compare two different LNode-system to see if they match"""
+	def match(self, a, b, d=None, ignore=''):
+		if type(a)==type(b):
+			#print a.val,'==',b.val
+			if self.simple_rule_match(a,b):
+				if type(d)==type(dict()):
+					self.parse_arguments(a,b,d)
+				if a.hasChilds() and b.hasChilds():
+					cmp_child = True
+					i = 0
+					j = 0
+					while i < len(a.childs) and j < len(b.childs) :
+						cmp_child = self.match(a.childs[i],b.childs[j],d,ignore)
+						
+						if not cmp_child:
+							if a.childs[i].val=='[':
+								j-=1
+							else:
+								return False
+						i+=1
+						j+=1
+
+					if i==len(b.childs):
+						return True
+					else:
+						return False
+				elif a.hasChilds() and not b.hasChilds():
+					return True
+				elif not a.hasChilds() and b.hasChilds():
+					return False
+				else:
+					return True
+			elif b.val in ignore:
+				return True
+			elif b.val==']':
+				return True
+			elif a.val=='[':
+				is_ok = False
+				try:
+					node = a.up().down(a)
+					is_ok = self.match(node,b,d,ignore)
+				except StopIteration:
+					return False
+
+				return is_ok
+			else:
+				return False
+		elif type(b)==type(str()):
+#			print 'TXT:',self.val,'==',b
+			if a.val==b and not a.hasChilds():
+				return True
+			else:
+				return False
+		else:
+			return False
+
+
 
 def look(instr,pos,bf_str, ldir,ignore):
 	is_ok = False
@@ -608,7 +1018,12 @@ def resolve_instructions(instr,rules,nmax,figures=dict()):
 	return instr
 
 def resolve_instructions_by_tree(instr,rules,nmax,figures=dict()):
-	itree = LTree() << instr
+	law_book = []
+
+	for law in rules.keys():
+		law_book.append(Rule(law, rules[law]))
+
+	itree = LTree(instr)
 
 	for n in range(1,nmax+1):
 		#oldstr = instr
@@ -619,26 +1034,38 @@ def resolve_instructions_by_tree(instr,rules,nmax,figures=dict()):
 		#oi = 0
 		node = itree.chop()
 		while True:
-			rule_exists, rkey = tree_lookup(node, rules)
+			new_str = None
 
-			if rule_exists:
-				if type(rules[rkey])==type(str()):
-					itree << rules[rkey]
-				elif type(rules[rkey])==type(dict()):
-					itree << resolve_prob_rule(rules[rkey])
+			for rule in law_book:
+				new_str = rule.try_case(node)
+				if new_str!=None:
+					break;
 
+			if new_str!=None:
+				itree << new_str
 			else:
-				itree << node.val
+				itree << node.to_string()
+
+#			rule_exists, rkey = tree_lookup(node, rules)
+
+#			if rule_exists:
+#				if type(rules[rkey])==type(str()):
+#					itree << rules[rkey]
+#				elif type(rules[rkey])==type(dict()):
+#					itree << resolve_prob_rule(rules[rkey])
+#
+#			else:
+#				itree << node.val
 
 			try:
 				node = node.next()
 			except StopIteration:
 				break
-	instr = itree.to_string()
+	#instr = itree.to_string()
 	#print 'n=',n,', ', instr
-	if (len(figures.keys())>0):
-		instr = resolve_instructions(instr,figures,1);
-	return instr
+	#if (len(figures.keys())>0):
+	#	instr = resolve_instructions(instr,figures,1);
+	return itree
 
 
 

@@ -1,7 +1,8 @@
 import lsystem as ls
 import turtle as t
 import numpy as np
-#from lviewer import *
+import string
+from lviewer import *
 
 figures ={'L':'','R':''}
 
@@ -22,7 +23,7 @@ delta = 22.5
 dr = 0.001
 r0 = 0.01
 
-generations = 10
+generations = 7
 instr = 'A'
 rules = {
 'A':'[&FL!A]/////\'[&FL!A]//////\'[&FL!A]',
@@ -30,7 +31,7 @@ rules = {
 'S':'F L',
 'L':'[\'\'\'^^{-f+f+f-|-f+f+f}]'}
 # Alternative rules
-ignore = '+-F' 
+#ignore = '+-F' 
 
 #dummy string='ABC[DE][SG[HI[JK]L]MNO]'
 #give matching algorithm acces to
@@ -47,12 +48,12 @@ ignore = '+-F'
 #	'B(x):x>=1':'B(x-1)'
 #}
 #
-instr ='ABC[DE][SG[HI[JK]L]MNO]'
+#instr ='A(5,4)BC[DE][SG[HI[JK]L]MNO]'
 #instr ='bbbaaaaa'
-rules = {
-'BC<S>G[HIL]M':'',
-'b<b':'X',
-}
+#rules = {
+#'A(x,y): x+y <10':{'A((x+y)v25,(x*y)v30)':1,'A(x,y)':1},
+#'BC<S>G[HIL]M':'X'
+#}
 i = 3
 mask = int('0xFFFF',16)
 i &=~2
@@ -61,16 +62,17 @@ print (1<<0), i,(mask&~2)&i
 print ls.parse_rule(instr,2,'a>b')
 print '---------------------'
 #for g in range(0,generations):
-ltree = ls.LTree()
-ltree << instr
-lrule = ls.LTree()
-lrule << 'BC'
-lrule = lrule.chop()
-lrule2 = ls.LTree() << 'G[HIL]M'
-ltree.print_tree()
-lrule.print_tree()
-lrule2.print_tree()
-
+#ltree = ls.LTree()
+#ltree << instr
+#lrule = ls.LTree()
+#lrule << 'BC'
+#lrule = lrule.chop()
+#lrule2 = ls.LTree() << 'G[HIL]M'
+#ltree.print_tree()
+#lrule.print_tree()
+#lrule2.print_tree()
+A = ls.LTree() << 'X(4,3)'
+B = ls.LTree() << 'B(x)'
 #print instr
 #print lrule
 #l0 = ltree.getNodeAt(9)
@@ -92,9 +94,21 @@ lrule2.print_tree()
 #	print 'Error'
 
 
-for g in range(0,5):
-	iostr = ls.resolve_instructions_by_tree(instr, rules,g)
-	print iostr
-#turtle = t.turtle(instr,X0,R0,r0,stepsize,delta,dr)
-#draw_turtle(turtle)
+#print ls.calculate('2((3*5e-1)/4-2)-3')
+#print ls.calculate('(5)+3')
+#print ls.calculate('(5)*3')
+#print ls.calculate('(5)/3')
+#print ls.calculate('(2-5)+2*3')
+#rint ls.calculate('-4.3+3*(2-5)/(2.3-0.3)+4')
+#print ls.calculate('2*(2v(3/2))')
+
+#for g in range(1,6):
+#	iostr = ls.resolve_instructions_by_tree(instr, rules,g)
+#	print iostr.to_string()
+itree = ls.resolve_instructions_by_tree(instr,rules,generations)
+#print itree.to_string()
+turtle = t.turtle_tree(itree,X0,R0,r0,stepsize,delta,dr)
+print 'Done!'
+
+draw_turtle(turtle)
 

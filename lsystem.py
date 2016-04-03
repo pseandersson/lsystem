@@ -26,6 +26,7 @@ def calculate(instr):
 	nums = '0123456789.'
 	math_op = '+-*/^v'
 	mem_val = None
+	mem_val_base = None
 	rvalue = 0.0
 	last_op = ''
 	val_str = ''
@@ -52,7 +53,9 @@ def calculate(instr):
 			elif instr[i]=='-' and \
 			 (val_str=='' or val_str[-1]=='e') and bracket_val==None:
 				if bracket_count==0:
-					val_str += instr[i]
+					lvalue = -1
+					cur_op = '*'
+					#val_str += instr[i]
 			elif instr[i]=='e' and \
 				 val_str!='' and\
 				 val_str[-1]!='-':
@@ -94,9 +97,16 @@ def calculate(instr):
 			elif instr[i] in '(':
 				bracket_count+=1
 
+		if mem_val_base!=None and lvalue!=None:
+			lvalue = pow(mem_val_base,lvalue)
+			mem_val_base = None
+
 		# Do math operations
 		if mem_val != None:
-			if last_op in '+-' and lvalue!=None:
+			if cur_op == '^' and lvalue != None:
+				mem_val_base = lvalue
+				cur_op = last_op
+			elif last_op in '+-' and lvalue!=None:
 				rvalue += mem_val
 				if last_op=='+':
 					mem_val = lvalue
@@ -106,12 +116,10 @@ def calculate(instr):
 				if last_op =='*':
 					mem_val *=lvalue
 				else:
-					mem_val /= lvalue
-			elif last_op in '^v' and lvalue!=None:
-				if last_op =='^':
-					mem_val = max(mem_val,lvalue)
-				else:
-					mem_val = min(mem_val,lvalue)
+					mem_val /= lvalue	
+			elif last_op == '^' and lvalue!=None:
+				mem_val = pow(mem_val,lvalue)
+
 		elif lvalue!=None:
 			mem_val = lvalue
 
@@ -178,7 +186,10 @@ class LNode(object):
 	def updateMaxDepth(self,depth):
 		self.depth = depth
 		if not self.isRoot() and not self.isBranch():
-			self.predecessor.updateMaxDepth(self.depth+1)
+			try:
+				self.predecessor.updateMaxDepth(self.depth+1)
+			except RuntimeError:
+				pass
 
 	"""Deprecated. Keep control of how many descendants
 	   there are for the LNode"""
@@ -190,13 +201,13 @@ class LNode(object):
 	"""Deprecated. see addChild() instead"""
 	def addBranch(self, val):
 		self.childs.append(LNode(val,self))
-		self.increaseDescendants()
+		#self.increaseDescendants()
 		return self.childs[-1]
 
 	"""Add a new command val as child to current node"""
 	def addChild(self, val):
 		self.childs.append(LNode(val,self))
-		self.increaseDescendants()
+		#self.increaseDescendants()
 		return self.childs[-1]
 
 	"""Check whether current node is a branch node or not"""
@@ -318,9 +329,12 @@ class LNode(object):
 
 	"""Internal function for next()"""
 	def next_at_parent(self):
-		if not self.isRoot():
-			return self.predecessor.next(self)
-		else:
+		try:
+			if not self.isRoot():
+				return self.predecessor.next(self)
+			else:
+				raise StopIteration
+		except RuntimeError:
 			raise StopIteration
 
 	"""Go to next function in the string-space"""
@@ -1029,6 +1043,7 @@ def resolve_instructions_by_tree(instr,rules,nmax,**extras):
 	law_book = []
 	figures = None
 	ignore = ''
+	definitions = None
 
 	if extras.has_key("figures"):
 		if type(extras['figures'])==types.DictType:
@@ -1041,9 +1056,31 @@ def resolve_instructions_by_tree(instr,rules,nmax,**extras):
 			ignore = extras['ignore']
 		else:
 			raise ValueError
-
-	for law in rules.keys():
-		law_book.append(Rule(law, rules[law],ignore))
+	# Resolve parametric input
+	if extras.has_key('definitions'):
+		if type(extras['definitions'])==types.DictType:
+			print extras['definitions']
+			definitions = dict()
+			for key, value in extras['definitions'].items():
+				definitions[key] = value
+			changes_made = True
+			while changes_made:
+				changes_made = False
+				for key, value in definitions.items():
+					for k1, v1 in definitions.items():
+						v0 = value
+						value = value.replace(k1,'('+v1+')')
+						if not v0==value:
+							changes_made = True
+					definitions[key] = value
+			for key, value in definitions.items():
+				definitions[key] = str(calculate(value))
+			
+	for law, conseq in rules.items():
+		if definitions:
+			for key, value in definitions.items():
+				conseq = conseq.replace(key,'('+value+')')
+		law_book.append(Rule(law, conseq,ignore))
 	itree = LTree();
 
 	if type(instr)==type(LTree()):

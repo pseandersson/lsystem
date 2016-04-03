@@ -19,7 +19,7 @@ X0 = np.array([0,0,0])
 R0 = np.eye(3)
 
 stepsize=0.1
-delta = 22.5
+delta = 86
 dr = 0.001
 r0 = 0.01
 
@@ -98,8 +98,15 @@ B = ls.LTree() << 'B(x)'
 #print ls.calculate('(5)+3')
 #print ls.calculate('(5)*3')
 #print ls.calculate('(5)/3')
-#print ls.calculate('(2-5)+2*3')
-#rint ls.calculate('-4.3+3*(2-5)/(2.3-0.3)+4')
+#print ls.calculate('(4-2)^2')
+#print ls.calculate('-2^2')
+#print ls.calculate('4-3')
+#print ls.calculate('(-2)^2')
+#print ls.calculate('(-3)^2*2-3')
+#print ls.calculate('5*(-2)^2')
+#print ls.calculate('5-(-2)^2')
+#print ls.calculate('2-4^.5')
+#print ls.calculate('-4.3+3*(2-5)/(2.3-0.3)+4')
 #print ls.calculate('2*(2v(3/2))')
 
 #for g in range(1,6):
@@ -119,8 +126,33 @@ rules = {
 	'*<->*':'+'
 }
 ignore='+-F'
-print instr
-itree = ls.resolve_instructions_by_tree(instr,rules,30,ignore=ignore)
+
+instr='F(1,0)'
+
+define = {
+	'c':'1',
+	'p':'0.3',
+	'q':'c-p',
+	'h':'(p*q)^0.5'
+}
+
+rules= {
+	'F(x)':'F(x*p)+F(x*h)--F(x*h)+F(x*q)'
+}
+rules ={
+	'F(x,t):t==0':'F(x*p,2)+F(x*h,1)--F(x*h,1)+F(x*q,0)',
+	'F(x,t):t>0':'F(x,t-1)'
+}
+define = {
+	'R':'1.456'
+}
+instr ='+(-90.)F(1)A(1)'
+rules= {
+	'A(s)':'F(s)[+A(s/R)][-A(s/R)]'
+}
+
+itree = ls.resolve_instructions_by_tree(instr,rules,10,\
+	definitions=define)
 #print itree.to_string()
 #itree = ls.resolve_instructions_by_tree(itree,rules,1,ignore=ignore)
 #print itree.to_string()

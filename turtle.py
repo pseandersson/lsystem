@@ -130,9 +130,9 @@ def turtle(instr,X0,R0,r0,stepsize, delta,dr):
 	return vertex_set,polygons
 
 def turtle_tree(itree,X0,R0,r0,istepsize, idelta,idr):
-	stepsize = istepsize
-	delta = idelta
-	dr = idr
+	stepsize = float(istepsize)
+	delta = float(idelta)
+	dr = float(idr)
 	radius = 1.*r0
 	pos = np.array(X0[0:3],dtype=float)
 	rot = np.array(R0[:,:],dtype=float)
@@ -150,13 +150,13 @@ def turtle_tree(itree,X0,R0,r0,istepsize, idelta,idr):
 
 	while True:
 		if node.hasArguments():
-			stepsize = node.getArgument(0)
-			delta = node.getArgument(0)
-			dr = node.getArgument(0)
+			stepsize = float(node.getArgument(0))
+			delta = float(node.getArgument(0))
+			dr = float(node.getArgument(0))
 		else:
-			stepsize = istepsize
-			delta = idelta
-			dr = idr
+			stepsize = float(istepsize)
+			delta = float(idelta)
+			dr = float(idr)
 
 		if node=='F':
 			if new_line:
@@ -164,8 +164,8 @@ def turtle_tree(itree,X0,R0,r0,istepsize, idelta,idr):
 				vertices = vertex_set[-1]
 				vertices.extend(pos[:])
 				new_line = False
-	
-			pos += stepsize*rot[:,0]
+
+			pos += float(stepsize)*rot[:,0]
 			vertices.extend(pos[:])
 
 		elif node=='f':

@@ -105,7 +105,30 @@ B = ls.LTree() << 'B(x)'
 #for g in range(1,6):
 #	iostr = ls.resolve_instructions_by_tree(instr, rules,g)
 #	print iostr.to_string()
-itree = ls.resolve_instructions_by_tree(instr,rules,generations)
+instr = 'F1F1F1'
+rules = {
+	'0<0>0':'0',
+	'0<0>1':'1[-F1F1]',
+	'0<1>0':'1',
+	'0<1>1':'1',
+	'1<0>0':'0',
+	'1<0>1':'1F1',
+	'1<1>0':'1',
+	'1<1>1':'0',
+	'*<+>*':'-',
+	'*<->*':'+'
+}
+ignore='+-F'
+print instr
+itree = ls.resolve_instructions_by_tree(instr,rules,30,ignore=ignore)
+#print itree.to_string()
+#itree = ls.resolve_instructions_by_tree(itree,rules,1,ignore=ignore)
+#print itree.to_string()
+#itree = ls.resolve_instructions_by_tree(itree,rules,1,ignore=ignore)
+#print itree.to_string()
+#itree = ls.resolve_instructions_by_tree(itree,rules,1,ignore=ignore)
+#print itree.to_string()
+
 #print itree.to_string()
 turtle = t.turtle_tree(itree,X0,R0,r0,stepsize,delta,dr)
 print 'Done!'

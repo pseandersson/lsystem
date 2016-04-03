@@ -211,57 +211,57 @@ class LNode(object):
 	def isRoot(self):
 		return self.predecessor==None
 
-	"""Compare two different LNode-system to see if they match"""
-	def match(self, b):
-		if type(self)==type(b):
-			#print self.val,'==',b.val
-			if self.val==b.val:
-				if self.hasChilds() and b.hasChilds():
-					cmp_child = True
-					i = 0
-					j = 0
-					while i < len(self.childs) and j < len(b.childs) :
-						cmp_child = self.childs[i].match(b.childs[j])
-						
-						if not cmp_child:
-							if self.childs[i].val=='[':
-								j-=1
-							else:
-								return False
-						i+=1
-						j+=1
-
-					if i==len(b.childs):
-						return True
-					else:
-						return False
-				elif self.hasChilds() and not b.hasChilds():
-					return True
-				elif not self.hasChilds() and b.hasChilds():
-					return False
-				else:
-					return True
-			elif b.val==']':
-				return True
-			elif self.val=='[':
-				is_ok = False
-				try:
-					node = self.up().down(self)
-					is_ok = node.match(b)
-				except StopIteration:
-					return False
-
-				return is_ok
-			else:
-				return False
-		elif type(b)==type(str()):
-#			print 'TXT:',self.val,'==',b
-			if self.val==b and not self.hasChilds():
-				return True
-			else:
-				return False
-		else:
-			return False
+#	"""Compare two different LNode-system to see if they match"""
+#	def match(self, b):
+#		if type(self)==type(b):
+#			#print self.val,'==',b.val
+#			if self.val==b.val:
+#				if self.hasChilds() and b.hasChilds():
+#					cmp_child = True
+#					i = 0
+#					j = 0
+#					while i < len(self.childs) and j < len(b.childs) :
+#						cmp_child = self.childs[i].match(b.childs[j])
+#						
+#						if not cmp_child:
+#							if self.childs[i].val=='[':
+#								j-=1
+#							else:
+#								return False
+#						i+=1
+#						j+=1
+#
+#					if i==len(b.childs):
+#						return True
+#					else:
+#						return False
+#				elif self.hasChilds() and not b.hasChilds():
+#					return True
+#				elif not self.hasChilds() and b.hasChilds():
+#					return False
+#				else:
+#					return True
+#			elif b.val==']':
+#				return True
+#			elif self.val=='[':
+#				is_ok = False
+#				try:
+#					node = self.up().down(self)
+#					is_ok = node.match(b)
+#				except StopIteration:
+#					return False
+#
+#				return is_ok
+#			else:
+#				return False
+#		elif type(b)==type(str()):
+##			print 'TXT:',self.val,'==',b
+#			if self.val==b and not self.hasChilds():
+#				return True
+#			else:
+#				return False
+#		else:
+#			return False
 
 	"""Navigate upwards in the tree structure."""
 	def up(self):
@@ -457,7 +457,7 @@ class LTree(object):
 			return self.root.to_string(True)
 
 class Rule(object):
-	def __init__(self,initstr, consequences):
+	def __init__(self,initstr, consequences,ignore=''):
 		self.flag = 0
 		self.key = None
 		self.less = None
@@ -468,6 +468,7 @@ class Rule(object):
 		self.cmp_type = None
 		self.fn_str = None
 		self.cmp_str = None
+		self.ignore = ignore
 
 		self.setup_case(initstr)
 		self.setup_consequences(consequences)
@@ -565,12 +566,14 @@ class Rule(object):
 		
 		if not self.simple_rule_match(self.key,node ):
 			return False, None
-
+		#print 'Key', self.key.val
 		if self.flag&LOOK_BEFORE:
 			lnode = node
 			try:
 				for i in range(self.less.depth):
 					lnode = lnode.up()
+					while lnode.val in self.ignore:
+						lnode = lnode.up()
 
 				if not self.match(lnode, self.less):
 					return False, None
@@ -673,19 +676,20 @@ class Rule(object):
 			else:
 				print 'Argument error'
 
-	"""Compare two different LNode-system to see if they match"""
-	def match(self, a, b, d=None, ignore=''):
+	"""Compare two different LNode-system to see if they match.
+	   a is the instruction b is the rule."""
+	def match(self, a, b, arglist=None):
 		if type(a)==type(b):
 			#print a.val,'==',b.val
 			if self.simple_rule_match(a,b):
-				if type(d)==type(dict()):
-					self.parse_arguments(a,b,d)
+				if type(arglist)==types.DictType:
+					self.parse_arguments(a,b,arglist)
 				if a.hasChilds() and b.hasChilds():
 					cmp_child = True
 					i = 0
 					j = 0
 					while i < len(a.childs) and j < len(b.childs) :
-						cmp_child = self.match(a.childs[i],b.childs[j],d,ignore)
+						cmp_child = self.match(a.childs[i],b.childs[j],arglist)
 						
 						if not cmp_child:
 							if a.childs[i].val=='[':
@@ -705,18 +709,22 @@ class Rule(object):
 					return False
 				else:
 					return True
-			elif b.val in ignore:
+			elif b.val == '*':
 				return True
+			elif a.val in self.ignore:
+				try:
+					return self.match(a.next(),b,arglist)
+				except StopIteration:
+					return False
 			elif b.val==']':
 				return True
 			elif a.val=='[':
 				is_ok = False
 				try:
 					node = a.up().down(a)
-					is_ok = self.match(node,b,d,ignore)
+					is_ok = self.match(node,b,arglist)
 				except StopIteration:
 					return False
-
 				return is_ok
 			else:
 				return False
@@ -1017,11 +1025,25 @@ def resolve_instructions(instr,rules,nmax,figures=dict()):
 		instr = resolve_instructions(instr,figures,1);
 	return instr
 
-def resolve_instructions_by_tree(instr,rules,nmax,figures=dict()):
+def resolve_instructions_by_tree(instr,rules,nmax,**extras):
 	law_book = []
+	figures = None
+	ignore = ''
+
+	if extras.has_key("figures"):
+		if type(extras['figures'])==types.DictType:
+			figures == extras['figures']
+		else:
+			raise ValueError
+
+	if extras.has_key('ignore'):
+		if type(extras['ignore'])==types.StringType:
+			ignore = extras['ignore']
+		else:
+			raise ValueError
 
 	for law in rules.keys():
-		law_book.append(Rule(law, rules[law]))
+		law_book.append(Rule(law, rules[law],ignore))
 	itree = LTree();
 
 	if type(instr)==type(LTree()):
@@ -1050,7 +1072,7 @@ def resolve_instructions_by_tree(instr,rules,nmax,figures=dict()):
 				break
 	#instr = itree.to_string()
 	#print 'n=',n,', ', instr
-	if (len(figures.keys())>0):
+	if figures:
 		itree = resolve_instructions_by_tree(itree,figures,1);
 	return itree
 

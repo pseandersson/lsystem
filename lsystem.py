@@ -144,10 +144,10 @@ class LNode(object):
 		self.childs = []
 		self.predecessor = predecessor
 		self.descendants = 0
-		self.depth = 0
+		self.depth = -1
 		self.val = val
 		self.arguments = []
-		self.updateMaxDepth(1)
+		#self.updateMaxDepth(1)
 
 	def __eq__(self, b):
 		if type(b)==types.StringType:
@@ -184,7 +184,7 @@ class LNode(object):
 
 	"""Update the depth for the nodes predecessor"""
 	def updateMaxDepth(self,depth):
-		self.depth = depth
+		self.depth = max(self.depth,depth) # cannot decresease depth suddenly
 		if not self.isRoot() and not self.isBranch():
 			try:
 				self.predecessor.updateMaxDepth(self.depth+1)
@@ -397,7 +397,15 @@ class LTree(object):
 	
 	"""Chopping trees to get access to its stems, branches and leaves,
 	   so new tree can be planted and grow"""
-	def chop(self):
+	def chop(self,**args):
+		if args.has_key('make_depth'):
+			node = self.root
+			while args['make_depth']:
+				node.updateMaxDepth(1)
+				try:
+					node = node.next()
+				except StopIteration:
+					break
 		tree = None
 		if len(self.root.childs)==1:
 			tree = self.root.childs.pop()
@@ -524,7 +532,7 @@ class Rule(object):
 		self.key = (LTree() << key_string[less_pos:great_pos]).chop()
 		
 		if self.flag&LOOK_BEFORE:
-			self.less    = (LTree() << key_string[0:less_pos-1]).chop()
+			self.less    = (LTree() << key_string[0:less_pos-1]).chop(make_depth=True)
 	
 		if self.flag&LOOK_AFTER:
 			self.greater = (LTree() << key_string[great_pos+1:]).chop()

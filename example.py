@@ -81,7 +81,7 @@ B = ls.LTree() << 'B(x)'
 #print l1.print_tree()
 #print lrule2.print_tree()
 #if l0.match(lrule2):
-#	print 'Equal'
+#x	print 'Equal'
 #if l0!=None:
 #	print lrule.depth
 #	for i in range(0,lrule.depth):
@@ -111,48 +111,47 @@ B = ls.LTree() << 'B(x)'
 
 #for g in range(1,6):
 #	iostr = ls.resolve_instructions_by_tree(instr, rules,g)
-#	print iostr.to_string()
-instr = 'F1F1F1'
-rules = {
-	'0<0>0':'0',
-	'0<0>1':'1[-F1F1]',
-	'0<1>0':'1',
-	'0<1>1':'1',
-	'1<0>0':'0',
-	'1<0>1':'1F1',
-	'1<1>0':'1',
-	'1<1>1':'0',
-	'*<+>*':'-',
-	'*<->*':'+'
-}
-ignore='+-F'
-
+#<	print iostr.to_string()
+#instr = 'F1F1F1'
+#rules = {
+#	'0<0>0':'0',
+#	'0<0>1':'1[-F1F1]',
+#	'0<1>0':'1',
+#	'0<1>1':'1',
+#	'1<0>0':'0',
+#	'1<0>1':'1F1',
+#	'1<1>0':'1',
+#	'1<1>1':'0',
+#	'*<+>*':'-',
+#	'*<->*':'+'
+#}
+#ignore='+-F'
+#
 instr='F(1,0)'
-
+#
 define = {
 	'c':'1',
 	'p':'0.3',
 	'q':'c-p',
 	'h':'(p*q)^0.5'
 }
-
-rules= {
-	'F(x)':'F(x*p)+F(x*h)--F(x*h)+F(x*q)'
-}
+#
+#rules= {
+#	'F(x)':'F(x*p)+F(x*h)--F(x*h)+F(x*q)'
+#}
 rules ={
 	'F(x,t):t==0':'F(x*p,2)+F(x*h,1)--F(x*h,1)+F(x*q,0)',
 	'F(x,t):t>0':'F(x,t-1)'
 }
-define = {
-	'R':'1.456'
-}
-instr ='+(-90.)F(1)A(1)'
-rules= {
-	'A(s)':'F(s)[+A(s/R)][-A(s/R)]'
-}
+#define = {
+#	'R':'1.456'
+#}
+#instr ='+(-90.)F(1)A(1)'
+#rules= {
+#	'A(s)':'F(s)[+A(s/R)][-A(s/R)]'
+#}
 
-itree = ls.resolve_instructions_by_tree(instr,rules,10,\
-	definitions=define)
+itree = ls.resolve_instructions_by_tree(instr,rules,15,definitions=define)
 #print itree.to_string()
 #itree = ls.resolve_instructions_by_tree(itree,rules,1,ignore=ignore)
 #print itree.to_string()

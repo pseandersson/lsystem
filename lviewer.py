@@ -118,7 +118,7 @@ def setup():
 	glLightfv(GL_LIGHT0, GL_DIFFUSE, vec(5, 5, 5, 1))
 	glLightfv(GL_LIGHT1, GL_POSITION, vec(1, 0, -.5, 0))
 	glLightfv(GL_LIGHT1, GL_DIFFUSE, vec(2.5, 2.5, 2.5, 1))
-	glLightfv(GL_LIGHT1, GL_SPECULAR, vec(5, 5, 5, 1))
+	glLightfv(GL_LIGHT1, GL_SPECULAR, vec(10, 5, 5, 1))
 
 	glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE, vec(0.98,0.98,0.94, 1))
 	glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, vec(1, 1, 1, 1))
@@ -132,7 +132,7 @@ def deg2rad(deg):
 class DrawTurtle(object):
 	def __init__(self,turtle_data):
 		#vertex_set, min_values, max_values = self.resolve_instructions(instr,X0,R0,stepsize,delta)
-		vertex_set, polygons = turtle_data
+		vertex_set, polygons,nodes = turtle_data
         # Compile a display list
 		self.list = glGenLists(1)
 		glNewList(self.list, GL_COMPILE)

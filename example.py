@@ -2,7 +2,7 @@ import lsystem as ls
 import turtle as t
 import numpy as np
 import string
-from lviewer import *
+#from lviewer import *
 
 figures ={'L':'','R':''}
 
@@ -146,13 +146,13 @@ rules ={
 #define = {
 #	'R':'1.456'
 #}
-#instr ='+(-90.)F(1)A(1)'
+#instr ='+(-90.)A(1)'
 #rules= {
 #	'A(s)':'F(s)[+A(s/R)][-A(s/R)]'
 #}
 
-itree = ls.resolve_instructions_by_tree(instr,rules,15,definitions=define)
-#print itree.to_string()
+itree = ls.resolve_instructions_by_tree(instr,rules,2,definitions=define)
+print itree.to_string()
 #itree = ls.resolve_instructions_by_tree(itree,rules,1,ignore=ignore)
 #print itree.to_string()
 #itree = ls.resolve_instructions_by_tree(itree,rules,1,ignore=ignore)
@@ -162,7 +162,9 @@ itree = ls.resolve_instructions_by_tree(instr,rules,15,definitions=define)
 
 #print itree.to_string()
 turtle = t.turtle_tree(itree,X0,R0,r0,stepsize,delta,dr)
+
+print turtle[2]
 print 'Done!'
 
-draw_turtle(turtle)
+#draw_turtle(turtle)
 

@@ -129,6 +129,28 @@ def turtle(instr,X0,R0,r0,stepsize, delta,dr):
 
 	return vertex_set,polygons
 
+class TNode(object):
+	def __init__(self,pos):
+		self.pos = []
+		self.pos.extend(pos[:])
+		self.out_edges = []
+		self.in_edges = []
+
+	def addEdge(self, tnode):
+		self.out_edges.append(tnode)
+		tnode.addInEdge(self)
+		return tnode
+
+	def addInEdge(self,tnode):
+		self.in_edges.append(tnode)
+
+	def __str__(self):
+		s = '@('+str(self.pos)+')'
+		for node in self.out_edges:
+			s += '\n' + str(node)
+		s = s.replace('\n','\n  ') 
+		return s
+
 def turtle_tree(itree,X0,R0,r0,istepsize, idelta,idr):
 	stepsize = float(istepsize)
 	delta = float(idelta)
@@ -147,6 +169,9 @@ def turtle_tree(itree,X0,R0,r0,istepsize, idelta,idr):
 	poly = None
 
 	node = itree.first()
+	tnodes = []
+	tnode_root = None
+	tnode = None
 
 	while True:
 		if node.hasArguments():
@@ -163,11 +188,14 @@ def turtle_tree(itree,X0,R0,r0,istepsize, idelta,idr):
 				vertex_set.append([])
 				vertices = vertex_set[-1]
 				vertices.extend(pos[:])
+				if tnode == None:
+					tnode = TNode(pos[:])
+					tnode_root = tnode
 				new_line = False
 
 			pos += float(stepsize)*rot[:,0]
 			vertices.extend(pos[:])
-
+			tnode = tnode.addEdge(TNode(pos[:]))
 		elif node=='f':
 			pos += stepsize*rot[:,0]
 			if poly==None:
@@ -192,10 +220,10 @@ def turtle_tree(itree,X0,R0,r0,istepsize, idelta,idr):
 			new_line = True
 			lpos = np.array(pos[:],dtype=float)
 			lrot = np.array(rot[:,:],dtype=float)
-			state.append((lpos,lrot))
+			state.append((lpos,lrot,tnode))
 		elif node==']':
 			new_line = True
-			pos,rot = state.pop()
+			pos,rot,tnode = state.pop()
 		elif node=='\'':
 			radius += dr
 		elif node=='!':
@@ -221,4 +249,4 @@ def turtle_tree(itree,X0,R0,r0,istepsize, idelta,idr):
 		except StopIteration:
 			break
 
-	return vertex_set,polygons
+	return vertex_set,polygons,tnode_root

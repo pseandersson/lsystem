@@ -487,6 +487,7 @@ class Rule(object):
 		self.consequences = None
 		self.prob_rules = []
 		self.cs = None # Cummulative Sum
+		self.functions = []
 		self.cmp_type = None
 		self.fn_str = None
 		self.cmp_str = None
@@ -541,23 +542,26 @@ class Rule(object):
 			self.setup_func(initstr[(i+1):])
 
 	def setup_func(self, funcstr):
-		self.cmp_type = ''
-		if '<=' in funcstr:
-			self.cmp_type='<='
-		elif '>=' in funcstr:
-			self.cmp_type ='>='
-		elif '==' in funcstr:
-			self.cmp_type = '=='
-		elif '!=' in funcstr:
-			self.cmp_type = '!='
-		elif '<' in funcstr:
-			self.cmp_type='<'
-		elif '>' in funcstr:
-			self.cmp_type='>'
+		funcstrs = funcstr.split('&&')
+		for fnstr in funcstrs:
+			cmp_type = ''
+			if '<=' in funcstr:
+				cmp_type='<='
+			elif '>=' in funcstr:
+				cmp_type ='>='
+			elif '==' in funcstr:
+				cmp_type = '=='
+			elif '!=' in funcstr:
+				cmp_type = '!='
+			elif '<' in funcstr:
+				cmp_type='<'
+			elif '>' in funcstr:
+				cmp_type='>'
 
-		pos = funcstr.find(self.cmp_type)
-		self.fn_str = funcstr[0:pos]
-		self.cmp_str = funcstr[pos+len(self.cmp_type):]
+			pos = fnstr.find(cmp_type)
+			fn_str = funcstr[0:pos]
+			cmp_str = funcstr[pos+len(cmp_type):]
+			self.functions.append((fn_str,cmp_str,cmp_type))
 
 	def setup_consequences(self, consequences):
 		if type(consequences)==type(dict()):
@@ -630,28 +634,28 @@ class Rule(object):
 			#if self.key.getArgumentCount()!=\
 			#	node.getArgumentCount():
 			#	return False
+			for fn_str, cmp_str, cmp_type in self.functions:
+				for i in range(self.key.getArgumentCount()):
+					fn_str = fn_str.replace(self.key.getArgument(i),\
+											node.getArgument(i))
+					cmp_str = cmp_str.replace(self.key.getArgument(i),\
+											node.getArgument(i))
 
-			fn_str = self.fn_str
-			cmp_str = self.cmp_str
+				if cmp_type=='<=':
+					state = calculate(fn_str) <= calculate(cmp_str)
+				elif cmp_type=='>=':
+					state = calculate(fn_str) >= calculate(cmp_str)
+				elif cmp_type=='==':
+					state = calculate(fn_str) == calculate(cmp_str)
+				elif cmp_type=='!=':
+					state = calculate(fn_str) != calculate(cmp_str)
+				elif cmp_type=='<':
+					state = calculate(fn_str) < calculate(cmp_str)
+				elif cmp_type=='>':
+					state = calculate(fn_str) > calculate(cmp_str)
 
-			for i in range(self.key.getArgumentCount()):
-				fn_str = fn_str.replace(self.key.getArgument(i),\
-										node.getArgument(i))
-				cmp_str = cmp_str.replace(self.key.getArgument(i),\
-										node.getArgument(i))
-
-			if self.cmp_type=='<=':
-				state = calculate(fn_str) <= calculate(cmp_str)
-			elif self.cmp_type=='>=':
-				state = calculate(fn_str) >= calculate(cmp_str)
-			elif self.cmp_type=='==':
-				state = calculate(fn_str) == calculate(cmp_str)
-			elif self.cmp_type=='!=':
-				state = calculate(fn_str) != calculate(cmp_str)
-			elif self.cmp_type=='<':
-				state = calculate(fn_str) < calculate(cmp_str)
-			elif self.cmp_type=='>':
-				state = calculate(fn_str) > calculate(cmp_str)
+				if not state:
+					break
 
 		return state, arglist
 
@@ -1064,10 +1068,10 @@ def resolve_instructions_by_tree(instr,rules,nmax,**extras):
 			ignore = extras['ignore']
 		else:
 			raise ValueError
+
 	# Resolve parametric input
 	if extras.has_key('definitions'):
 		if type(extras['definitions'])==types.DictType:
-			print extras['definitions']
 			definitions = dict()
 			for key, value in extras['definitions'].items():
 				definitions[key] = value

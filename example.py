@@ -2,7 +2,7 @@ import lsystem as ls
 import turtle as t
 import numpy as np
 import string
-#from lviewer import *
+from lviewer import *
 
 figures ={'L':'','R':''}
 
@@ -14,7 +14,7 @@ rules = {
 'D':'|CFB-F+B|FA&F^A&&FB-F+B|FC//'}
 
 
- 
+
 X0 = np.array([0,0,0])
 R0 = np.eye(3)
 
@@ -31,7 +31,7 @@ rules = {
 'S':'F L',
 'L':'[\'\'\'^^{-f+f+f-|-f+f+f}]'}
 # Alternative rules
-#ignore = '+-F' 
+#ignore = '+-F'
 
 #dummy string='ABC[DE][SG[HI[JK]L]MNO]'
 #give matching algorithm acces to
@@ -59,8 +59,8 @@ mask = int('0xFFFF',16)
 i &=~2
 print (1<<0), i,(mask&~2)&i
 
-print ls.parse_rule(instr,2,'a>b')
-print '---------------------'
+print (ls.parse_rule(instr,2,'a>b'))
+print ('---------------------')
 #for g in range(0,generations):
 #ltree = ls.LTree()
 #ltree << instr
@@ -152,7 +152,7 @@ rules ={
 #}
 
 itree = ls.resolve_instructions_by_tree(instr,rules,2,definitions=define)
-print itree.to_string()
+print(itree.to_string())
 #itree = ls.resolve_instructions_by_tree(itree,rules,1,ignore=ignore)
 #print itree.to_string()
 #itree = ls.resolve_instructions_by_tree(itree,rules,1,ignore=ignore)
@@ -163,8 +163,8 @@ print itree.to_string()
 #print itree.to_string()
 turtle = t.turtle_tree(itree,X0,R0,r0,stepsize,delta,dr)
 
-print turtle[2]
-print 'Done!'
+print(turtle[2])
+print('Done!')
 
-#draw_turtle(turtle)
+draw_turtle(turtle)
 

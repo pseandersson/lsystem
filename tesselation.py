@@ -1,5 +1,4 @@
 import sys
-sys.path.append('/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/site-packages/pyglet-1.2.4-py2.7.egg')
 
 import numpy as np
 import pyglet
@@ -39,7 +38,7 @@ class LViewer(pyglet.window.Window):
 
 	def on_draw(self):
 		glClear(GL_COLOR_BUFFER_BIT |  GL_DEPTH_BUFFER_BIT)
-		
+
 	def on_resize(self, width,height):
 		glViewport(0, 0, width, height)
 

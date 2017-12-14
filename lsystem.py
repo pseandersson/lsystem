@@ -33,9 +33,9 @@ def calculate(instr):
 	bracket_start = None
 	bracket_val = None
 	bracket_count = 0
-	
+
 	i = 0
-	
+
 	while i < len(instr):
 		lvalue = None
 		cur_op = None
@@ -64,7 +64,7 @@ def calculate(instr):
 			else:
 				if len(val_str)>0:
 					try:
-						lvalue = string.atof(val_str)
+						lvalue = float(val_str)
 						val_str = ''
 					except ValueError:
 						pass
@@ -75,7 +75,7 @@ def calculate(instr):
 					lvalue = bracket_val
 					bracket_val = None
 
-				# Store operatator 
+				# Store operatator
 				if instr[i] in math_op:
 					cur_op=instr[i]
 				# If a bracket context is
@@ -116,7 +116,7 @@ def calculate(instr):
 				if last_op =='*':
 					mem_val *=lvalue
 				else:
-					mem_val /= lvalue	
+					mem_val /= lvalue
 			elif last_op == '^' and lvalue!=None:
 				mem_val = pow(mem_val,lvalue)
 
@@ -150,16 +150,16 @@ class LNode(object):
 		#self.updateMaxDepth(1)
 
 	def __eq__(self, b):
-		if type(b)==types.StringType:
+		if isinstance(b, str):
 			return self.val==b
 		else:
 			return NotImplemented
 
 	"""setArguments of node"""
 	def setArguments(self, args):
-		if type(args)==type(str()):
+		if isinstance(args, str):
 			self.arguments = args[1:-1].split(',')
-		elif type(args)==type(dict()):
+		elif isinstance(args, dict):
 			for i in range(0,self.getArgumentCount()):
 				arg_expr = self.getArgument(i)
 				for key, value in args.items():
@@ -233,7 +233,7 @@ class LNode(object):
 #					j = 0
 #					while i < len(self.childs) and j < len(b.childs) :
 #						cmp_child = self.childs[i].match(b.childs[j])
-#						
+#
 #						if not cmp_child:
 #							if self.childs[i].val=='[':
 #								j-=1
@@ -284,7 +284,7 @@ class LNode(object):
 			else:
 				return self.predecessor
 
-	"""Navigate downwards in the tree. 
+	"""Navigate downwards in the tree.
 	   If last_child is given, it will go down
 	   in the sibling node to last_child which is
 	   ordered after last_child in childs. If
@@ -369,10 +369,10 @@ class LNode(object):
 		return tstr
 
 	"""Display the node tree"""
-	def print_tree(self, indent=0):		
+	def print_tree(self, indent=0):
 		ostr = str().zfill(indent).replace('0',' ') + self.val
 		ostr += " ("+ str(self.depth)+")"
-		print ostr
+		print(ostr)
 		for node in self.childs:
 			node.print_tree(indent+2)
 
@@ -386,19 +386,19 @@ class LTree(object):
 		self.root = LNode()
 		self.node = self.root
 
-		if type(initstr)==type(str()):
+		if isinstance(initstr, str):
 			self.push(initstr)
 
 	"""Push strings into the tree structure"""
 	def __lshift__(self,instr):
-		if type(instr)==type(str()):
+		if isinstance(instr, str):
 			self.push(instr)
 		return self
-	
+
 	"""Chopping trees to get access to its stems, branches and leaves,
 	   so new tree can be planted and grow"""
 	def chop(self,**args):
-		if args.has_key('make_depth'):
+		if 'make_depth' in args.keys():
 			node = self.root
 			while args['make_depth']:
 				node.updateMaxDepth(1)
@@ -531,13 +531,13 @@ class Rule(object):
 			key_string = initstr
 
 		self.key = (LTree() << key_string[less_pos:great_pos]).chop()
-		
+
 		if self.flag&LOOK_BEFORE:
 			self.less    = (LTree() << key_string[0:less_pos-1]).chop(make_depth=True)
-	
+
 		if self.flag&LOOK_AFTER:
 			self.greater = (LTree() << key_string[great_pos+1:]).chop()
-	
+
 		if self.flag&FUNC_DEF:
 			self.setup_func(initstr[(i+1):])
 
@@ -564,11 +564,11 @@ class Rule(object):
 			self.functions.append((fn_str,cmp_str,cmp_type))
 
 	def setup_consequences(self, consequences):
-		if type(consequences)==type(dict()):
+		if isinstance(consequences, dict):
 			self.type = STOCHASTIC_RULE
 			weight = 0.;
 			itr = iter(consequences)
-			
+
 			self.cs = [0.]
 			try:
 				while True:
@@ -578,7 +578,7 @@ class Rule(object):
 					self.prob_rules.append(rule)
 			except StopIteration:
 				pass
-			
+
 			self.cs = np.array(self.cs,dtype=float)
 			self.cs /= self.cs.max()
 		else:
@@ -589,7 +589,7 @@ class Rule(object):
 	def trial(self,node):
 		bf_node = None
 		af_node = None
-		
+
 		if not self.simple_rule_match(self.key,node ):
 			return False, None
 		#print 'Key', self.key.val
@@ -620,7 +620,7 @@ class Rule(object):
 		# Create argument list
 		arglist = dict()
 		self.parse_arguments(self.key,node,arglist)
-		
+
 		if bf_node:
 			self.match(bf_node, self.less, arglist)
 		if af_node:
@@ -661,7 +661,7 @@ class Rule(object):
 
 	def return_rule(self,arglist=None,rule_id=1):
 		rule = LTree(self.prob_rules[rule_id-1])
-		if type(arglist)==type(dict()):
+		if isinstance(arglist, dict):
 			node = rule.first();
 			while True:
 				node.setArguments(arglist)
@@ -697,10 +697,10 @@ class Rule(object):
 	"""Internal method to parse arguments"""
 	def parse_arguments(self, a, b, d):
 		for i in range(0,a.getArgumentCount()):
-			if not d.has_key(a.getArgument(i)):
+			if not a.getArgument(i) in d.keys():
 				d[a.getArgument(i)] = b.getArgument(i)
 			else:
-				print 'Argument error'
+				print('Argument error')
 
 	"""Compare two different LNode-system to see if they match.
 	   a is the instruction b is the rule."""
@@ -708,7 +708,7 @@ class Rule(object):
 		if type(a)==type(b):
 			#print a.val,'==',b.val
 			if self.simple_rule_match(a,b):
-				if type(arglist)==types.DictType:
+				if isinstance(arglist, dict):
 					self.parse_arguments(a,b,arglist)
 				if a.hasChilds() and b.hasChilds():
 					cmp_child = True
@@ -716,7 +716,7 @@ class Rule(object):
 					j = 0
 					while i < len(a.childs) and j < len(b.childs) :
 						cmp_child = self.match(a.childs[i],b.childs[j],arglist)
-						
+
 						if not cmp_child:
 							if a.childs[i].val=='[':
 								j-=1
@@ -754,7 +754,7 @@ class Rule(object):
 				return is_ok
 			else:
 				return False
-		elif type(b)==type(str()):
+		elif isinstance(b,str):
 #			print 'TXT:',self.val,'==',b
 			if a.val==b and not a.hasChilds():
 				return True
@@ -776,7 +776,7 @@ def look(instr,pos,bf_str, ldir,ignore):
 	tmp_str_list = []
 	tmp_str_list.append([])
 	tmp_str = tmp_str_list[-1]
-	
+
 	while i > 0 and i+1 < len(instr):
 		i += ldir
 		tmp = str().join(tmp_str)
@@ -1008,12 +1008,12 @@ def resolve_prob_rule(rules):
 			prob_rules.append(rule)
 	except StopIteration:
 		pass
-	
+
 	cs = np.array(cs,dtype=float)
 	cs /= cs.max()
 
 	r = rand(1)
-	
+
 	for k in range(0,len(cs)):
 		if r < cs[k]:
 			return prob_rules[k-1]
@@ -1037,9 +1037,9 @@ def resolve_instructions(instr,rules,nmax,figures=dict()):
 			rule_exists, rkey = lookup(oldstr, oi, rules, key)
 
 			if rule_exists:
-				if type(rules[rkey])==type(str()):
+				if isinstance(rules[rkey], str):
 					instr = instr + rules[rkey]
-				elif type(rules[rkey])==type(dict()):
+				elif isinstance(rules[rkey], dict):
 					instr = instr + resolve_prob_rule(rules[rkey])
 
 			else:
@@ -1057,21 +1057,21 @@ def resolve_instructions_by_tree(instr,rules,nmax,**extras):
 	ignore = ''
 	definitions = None
 
-	if extras.has_key("figures"):
-		if type(extras['figures'])==types.DictType:
+	if 'figures' in extras.keys():
+		if isinstance(extras['figures'], dict):
 			figures == extras['figures']
 		else:
 			raise ValueError
 
-	if extras.has_key('ignore'):
-		if type(extras['ignore'])==types.StringType:
+	if 'ignore' in extras.keys():
+		if isinstance(extras['ignore'], str):
 			ignore = extras['ignore']
 		else:
 			raise ValueError
 
 	# Resolve parametric input
-	if extras.has_key('definitions'):
-		if type(extras['definitions'])==types.DictType:
+	if 'definitions' in extras.keys():
+		if isinstance(extras['definitions'], dict):
 			definitions = dict()
 			for key, value in extras['definitions'].items():
 				definitions[key] = value
@@ -1087,7 +1087,7 @@ def resolve_instructions_by_tree(instr,rules,nmax,**extras):
 					definitions[key] = value
 			for key, value in definitions.items():
 				definitions[key] = str(calculate(value))
-			
+
 	for law, conseq in rules.items():
 		if definitions:
 			for key, value in definitions.items():

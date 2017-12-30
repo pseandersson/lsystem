@@ -1,0 +1,179 @@
+body {
+    touch-action: none;
+}
+h1 {
+    font-size: 1em;
+    font-family: sans-serif
+}
+
+.variable {
+    width: 2em;
+}
+
+.pattern {
+    width: 5em;
+}
+
+.replace {
+    width: auto;
+}
+
+.remove {
+    color:white;
+    background-color: red;
+    border-style: solid;
+    border-width: 1px;
+}
+
+*[draggable=true] {
+    cursor: move;
+}
+
+.codeblock {
+    background-color: white;
+    border-style: solid;
+    border-width: 2px;
+    border-radius: 0.24em;
+    width: 1.2em;
+    height: 1.2em;
+    font-size: 2em;
+    font-family: sans-serif;
+    font-weight: bold;
+    float: left;
+    text-align: center;
+}
+
+.args {
+    width: auto;
+    display: flex;
+}
+
+
+.arg {
+    width: 1em;
+    height: 1em;
+    border-radius: 100%;
+    border-style: solid;
+    border-color: black;
+    display: block;
+    line-height: 100%;
+    text-align: center;
+    font-size: 100%;
+}
+
+.codeblock span {
+    margin: auto;
+}
+
+.codeblock a {
+    margin: auto 0.1em;
+    border: none;
+    text-decoration: none;
+    color: black;
+}
+
+.forward {
+    border-color: black;
+    background-color: blanchedalmond;
+    color:black;
+}
+
+.rotatecw90, .rotateccw90 {
+    border-color: black;
+    background-color: blueviolet;
+    color:white;
+}
+
+.cut {
+    border-color: black;
+    background-color: lightseagreen;
+    color:black;
+}
+
+.diamond {
+    border-color: black;
+    background-color: lightseagreen;
+    color:black;
+}
+
+.proc {
+    background-color: aliceblue;
+}
+
+#definitions {
+    flex-shrink: initial;
+}
+
+.definition {
+    border-radius: 0.5em;
+    border-color: grey;
+    border-width: 1px;
+    border-style: solid;
+    padding: 0.5em;
+    margin-bottom: 0.25em;
+}
+
+.variable {
+    border-radius: 2em;
+    border: 2px solid grey;
+    background-color: cornflowerblue;
+    color: beige;
+    width: 2em;
+    height: 2em;
+    text-align: center;
+    font-weight: bold;
+}
+
+.expression {
+    border-radius: 0.25em;
+    border: 2px solid grey;
+    background-color: white;
+    color: black;
+    height: 1em;
+    text-align: center;
+}
+
+#instructions, h1 {
+    clear:both;
+}
+
+#main, .procedure {
+    width: 100%;
+    height: 4.8em;
+    background-color: aquamarine;
+    border-style: solid;
+    border-width: 2px;
+    border-color: black;
+    clear: both;
+}
+
+.highlight {
+    border-color: greenyellow;
+    background: green;
+    color: greenyellow;
+}
+
+.highlight span {
+    border-color: greenyellow;
+    background: green;
+    color: greenyellow;
+}
+
+.ondrag {
+    position: absolute;
+    z-index: -1;
+}
+
+.cross {
+    position: relative;
+    font-size: 2.4em;
+    float:right;
+    text-align: center;
+    vertical-align: baseline;
+    color: darkred;
+    margin: 0 0.1em;
+}
+
+.cross:hover {
+    color: red;
+}

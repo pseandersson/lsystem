@@ -7,146 +7,14 @@
 
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
-    <link rel="stylesheet" type="text/css" media="screen" href="main.css" />
+    <link rel="stylesheet" type="text/css" href="main.css" />
     <script type="text/javascript"
         src="https://cdn.rawgit.com/brython-dev/brython/3.3.5/www/src/brython.js">
     </script>
     <script type="text/javascript"
     src="https://cdn.rawgit.com/brython-dev/brython/3.3.5/www/src/brython_stdlib.js">
     </script>
-    <style type="text/css">
-    body {
-        touch-action: none;
-    }
-    h1 {
-        font-size: 1em;
-        font-family: sans-serif
-    }
-
-    .variable {
-        width: 2em;
-    }
-
-    .pattern {
-        width: 5em;
-    }
-
-    .replace {
-        width: auto;
-    }
-
-    .remove {
-        color:white;
-        background-color: red;
-        border-style: solid;
-        border-width: 1px;
-    }
-
-    *[draggable=true] {
-        cursor: move;
-    }
-
-    .codeblock {
-        background-color: white;
-        border-style: solid;
-        border-width: 2px;
-        border-radius: 20%;
-        width: 1.2em;
-        height: 1.2em;
-        font-size: 2em;
-        font-family: sans-serif;
-        font-weight: bold;
-        float: left;
-        text-align: center;
-    }
-
-    .codeblock span {
-        vertical-align: baseline;
-    }
-
-    .forward {
-        border-color: black;
-        background-color: blanchedalmond;
-        color:black;
-    }
-
-    .rotatecw90, .rotateccw90 {
-        border-color: black;
-        background-color: blueviolet;
-        color:white;
-    }
-
-    .cut {
-        border-color: black;
-        background-color: lightseagreen;
-        color:black;
-    }
-
-    .diamond {
-        border-color: black;
-        background-color: lightseagreen;
-        color:black;
-    }
-
-    #definitions {
-        flex-shrink: initial;
-    }
-
-    .definition {
-        border-radius: 0.5em;
-        border-color: grey;
-        border-width: 1px;
-        border-style: solid;
-        padding: 0.5em;
-        margin-bottom: 0.25em;
-    }
-
-    .variable {
-        border-radius: 2em;
-        border: 2px solid grey;
-        background-color: cornflowerblue;
-        color: beige;
-        width: 2em;
-        height: 2em;
-        text-align: center;
-        font-weight: bold;
-    }
-
-    .expression {
-        border-radius: 0.25em;
-        border: 2px solid grey;
-        background-color: white;
-        color: black;
-        height: 1em;
-        text-align: center;
-    }
-
-    #instructions, h1 {
-        clear:both;
-    }
-
-    #main {
-        width: 100%;
-        height: 4.8em;
-        background-color: aquamarine;
-        border-style: solid;
-        border-width: 2px;
-        border-color: black;
-    }
-
-    .highlight {
-        border-color: greenyellow;
-        background: green;
-        color: greenyellow;
-    }
-
-    .ondrag {
-        position: absolute;
-        z-index: -1;
-    }
-
-
-    </style>
+    <script type="text/javascript" src="dnd.js"></script>
     </head>
 <body onload="brython()">
 <!-- <script src="lsystem.py" type="text/python"></script> -->
@@ -174,234 +42,6 @@ def compute(ev):
     document["output"].value = itree.to_string()
     #   print(itree.to_string())
 </script>
-<script type="text/javascript">
-"use strict"
-function DragAndDropHelper(container, classname, horizontal) {
-    // Internal variables to keep track of items
-    var mode = null;
-    var hover_item = null;
-    var drag_item = null;
-
-    this.horizontal = (horizontal !== undefined)? horizontal : true;
-    this.index_count = 0;
-
-    // Drop container
-    this.dropContainer = document.getElementById(container);
-    this.itemClassname = classname;
-
-    // Regular expressions for matching classes and values
-    const val_pat = /([+-]?[0-9\.]+)(%|[a-z]+)*/i;
-    const highlight_pat = / highlight\b/;
-    const ondrag_pat = / ondrag\b/;
-
-    // Mode constants
-    const ADD = "add";
-    const REARRANGE = "rearrange";
-
-    this.allowDrop = function(ev) {
-        ev.preventDefault();
-        var current_obj;
-        var width;
-        var height;
-        var highlight_element = false;
-
-        // Loop through all elements to see if
-        // and subitems are matched
-        Array.from(this.dropContainer.children).forEach( function(value) {
-            // Skip if same
-            if (drag_item === value)
-                return;
-            var rect = value.getBoundingClientRect();
-            // Convert margin to number
-            var lm = val_pat.exec(value.style.marginLeft);
-            var tm = val_pat.exec(value.style.marginTop);
-            // Compensate for left margin
-            if (lm === null)
-                lm = 0;
-            else
-                lm =  (lm[2] == "em") ? lm[1]*16 : lm[1];
-            // Compensate for top margin
-            if (tm === null)
-                tm = 0;
-            else
-                tm =  (tm[2] == "em") ? tm[1]*16 : tm[1];
-
-            // check if it's occupying the item
-            if (ev.x >= rect.left-lm &&
-                ev.x <= rect.right-lm/2 &&
-                ev.y >= rect.top-tm &&
-                ev.y <= rect.bottom-tm/2)
-            {
-                highlight_element = (ev.x >= rect.left && this.horizontal === true || ev.y >= rect.top && this.horizontal === false);
-
-                width = rect.width;
-                height = rect.height;
-                current_obj = value;
-            }
-        }.bind(this));
-
-        // Update state of hovered items
-        if (current_obj != hover_item) {
-            if (hover_item != null) {
-                hover_item.style.marginLeft = "0px";
-                hover_item.style.marginTop = "0px";
-                lowlight(hover_item);
-            }
-
-            hover_item = current_obj;
-
-            if (hover_item != null) {
-                if (this.horizontal) {
-                    hover_item.style.marginLeft = width + "px";
-                } else {
-                    hover_item.style.marginTop = height + "px";
-                }
-            }
-        }
-        // If in add mode, then always update highlight
-        if (mode === ADD && hover_item != null) {
-            if (highlight_element) {
-                highlight(hover_item);
-            } else {
-                lowlight(hover_item);
-            }
-        }
-    }
-
-    function highlight(element) {
-        if (!element.className.includes(" highlight"))
-            element.className = element.className + " highlight";
-    }
-
-    function lowlight(element) {
-        element.className = element.className.replace(highlight_pat,"");
-    }
-
-    this.drag = function(ev) {
-        ev.dataTransfer.setData("text", ev.target.id);
-        mode = ADD;
-    }
-
-    this.removeItem = function(ev) {
-        var target = this.getValidTarget(ev.target);
-        if (target !== null)
-            target.parentElement.removeChild(target);
-    }
-
-    this.dragAndArrange = function (ev) {
-        ev.dataTransfer.setData("text", ev.target.id);
-        drag_item = ev.target;
-        // We have to hide it so the other
-        // items can occupy the chosen items place
-        drag_item.className += " ondrag";
-        // set mode
-        mode = REARRANGE;
-    }
-
-    this.drop = function(ev) {
-        ev.preventDefault();
-        var lMode = mode;
-        mode = null;
-        ev.dataTransfer.dropEffect = "none"
-
-        var id = ev.dataTransfer.getData("text");
-        var node = document.getElementById(id);
-
-        if (node == null)
-            return;
-
-        // if not the main container then
-        // we shall query for replacement
-
-        if (lMode === ADD)
-            if ((ev.target.id !== this.dropContainer.id))
-                this.replace(ev, node)
-            else
-                this.add(ev, node);
-        else if (lMode === REARRANGE)
-            this.arrange(node)
-    }
-
-    this.resetDrag = function(event) {
-        if (hover_item != null) {
-            hover_item.style.marginLeft = "0em";
-            hover_item.style.marginTop = "0em";
-            lowlight(hover_item);
-            hover_item = null;
-        }
-        if (drag_item !== null) {
-            drag_item.style.visibility = "initial";
-            drag_item.className = drag_item.className.replace(ondrag_pat, "");
-            drag_item = null;
-        }
-    }
-
-    this.newNode = function(node) {
-        var element = node.cloneNode(true);
-        element.addEventListener("dragstart", function(e) { this.dragAndArrange(e); }.bind(this), false);
-        element.addEventListener("dragend", function(e) { this.resetDrag(e); }.bind(this), false);
-        element.addEventListener("click", function(e) { this.removeItem(e); }.bind(this), false);
-        element.setAttribute("id", this.dropContainer.id + "__item__" + this.index_count++);
-        return element;
-    }
-
-    this.add = function(ev, node) {
-        var element = this.newNode(node);
-        if (hover_item !== null)
-            ev.target.insertBefore(element, hover_item);
-        else
-            ev.target.appendChild(element);
-    }
-
-    this.arrange = function(node) {
-        if (hover_item !== null) {
-            this.dropContainer.insertBefore(node, hover_item);
-        }
-    }
-
-    this.getValidTarget = function(target) {
-        var lTarget = target;
-        while ((lTarget !== null) && (!lTarget.className.includes(this.itemClassname))) {
-            lTarget = lTarget.parentElement;
-        }
-        return lTarget;
-    }
-
-    this.replace = function(ev, node) {
-        var element = this.newNode(node);
-        var target = this.getValidTarget(ev.target);
-        if (target !== null)
-            this.dropContainer.replaceChild(element, target);
-    }
-
-    this.dropContainer.addEventListener("drop", this.drop.bind(this), false);
-    this.dropContainer.addEventListener("dragover", this.allowDrop.bind(this), false);
-
-    {
-        var _childs = document.getElementsByClassName(this.itemClassname);
-        var _l = _childs.length;
-        var _i = 0;
-
-        for (_i = 0; _i < _l; _i++) {
-            var child = _childs.item(_i);
-            child.addEventListener("dragstart", function(e) { this.drag(e); }.bind(this), false);
-            child.addEventListener("dragend", function(e) { this.resetDrag(e); }.bind(this), false);
-        }
-    }
-}
-
-
-function initDnDContainer(container, classname) {
-    dropContainer = document.getElementById(container);
-    itemClassname = classname;
-    Array.from(document.getElementsByClassName(classname)).forEach(
-        function (element) {
-            element.ondragstart = drag;
-            element.ondragend = resetDrag;
-        }
-    );
-}
-</script>
 <form>
 <h1>Initial Expression</h1>
 <div id="codeblocks">
@@ -418,16 +58,76 @@ function initDnDContainer(container, classname) {
     <div class="codeblock fire-extinguisher" id="fire-extinguisher" draggable="true"><span class="fa">&#xf134;</span></div>
     <div class="codeblock flag" id="flag" draggable="true"><span class="fa">&#xf024;</span></div>
     <div class="codeblock flask" id="flask" draggable="true"><span class="fa">&#xf0c3;</span></div>
+    <div class="codeblock args" id="something" draggable="true"><span class="fa">&#xf085;</span><span class="arg"></span></div>
+    <div class="codeblock args" id="something_big" draggable="true"><span class="fa">&#xf085;</span><span class="arg">1</span><span class="arg">2</span></div>
 </div>
 <div id="instructions">
 <div id="main">
 </div>
 </div>
 <script>
-// initDnDContainer("main", "codeblock");
-var dndObject = new DragAndDropHelper("main", "codeblock");
+initDnDContainer("main", "codeblock");
+var proc = 0;
 
+function removeNode(node) {
+    if (node === null || node === undefined)
+        return;
+    var id = DragAndDropHelper.registered_ids.indexOf(node.id);
+    if (id > -1)
+        DragAndDropHelper.registered_ids.splice(id, 1);
+    node.remove();
+}
+
+function removeProcedure(index) {
+    var container = document.getElementById("procedure" + index);
+    var items = document.getElementsByClassName("proc" + index);
+    Array.from(items).forEach(removeNode );
+    Array.from(container).forEach(removeNode);
+    removeNode(container.remove());
+    removeNode(document.getElementById("proc" + index));
+    proc--;
+}
+
+function addProcedure() {
+    var procedure_content = document.getElementById("instructions");
+    var cross = document.createElement("div");
+    var procedure = document.createElement("div");
+    var index = ++proc;
+    var codeblocks = document.getElementById("codeblocks");
+    var codeblock = document.createElement("div");
+    var button = document.createElement("a");
+    procedure.setAttribute("class", "procedure");
+    procedure.setAttribute("id", "procedure" + index);
+
+    cross.setAttribute("class", "cross");
+    cross.addEventListener("click", function (e) { removeProcedure(index); }, false);
+    cross.innerHTML = "<span class=\"fa\">&#xf057;</span>";
+
+    codeblock.setAttribute("class", "codeblock proc proc" + index);
+    codeblock.setAttribute("draggable", "true");
+    codeblock.setAttribute("id", "proc" + index);
+    codeblock.innerText = "P" + index;
+
+    var title = codeblock.cloneNode(true);
+    title.removeAttribute("draggable");
+    title.removeAttribute("id");
+    title.setAttribute("class", "codeblock proc args");
+    button.setAttribute("class", "fa");
+    button.setAttribute("href", "#");
+    button.addEventListener("click", function(e) {alert("hello"); }, false);
+    button.innerHTML = "&#xf0fe;"
+    title.appendChild(button);
+
+    procedure.appendChild(cross);
+    procedure_content.appendChild(title);
+    procedure_content.appendChild(procedure);
+    codeblocks.appendChild(codeblock);
+
+    initDnDContainer(procedure.id, "codeblock");
+}
+addProcedure();
 </script>
+<input type="button" onclick="addProcedure()" class="fa" value="&#xf0fe;" />
 <input id="instr" type="text" value="F(1,0)" />
 <label>Generations:</label>
 <select id="gen">

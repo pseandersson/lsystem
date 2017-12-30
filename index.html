@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>L System</title>
+
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    <link rel="stylesheet" type="text/css" media="screen" href="main.css" />
+    <script type="text/javascript"
+        src="https://cdn.rawgit.com/brython-dev/brython/3.3.5/www/src/brython.js">
+    </script>
+    <script type="text/javascript"
+    src="https://cdn.rawgit.com/brython-dev/brython/3.3.5/www/src/brython_stdlib.js">
+    </script>
+    <style type="text/css">
+    body {
+        touch-action: none;
+    }
+    h1 {
+        font-size: 1em;
+        font-family: sans-serif
+    }
+
+    .variable {
+        width: 2em;
+    }
+
+    .pattern {
+        width: 5em;
+    }
+
+    .replace {
+        width: auto;
+    }
+
+    .remove {
+        color:white;
+        background-color: red;
+        border-style: solid;
+        border-width: 1px;
+    }
+
+    *[draggable=true] {
+        cursor: move;
+    }
+
+    .codeblock {
+        background-color: white;
+        border-style: solid;
+        border-width: 2px;
+        border-radius: 20%;
+        width: 1.2em;
+        height: 1.2em;
+        font-size: 2em;
+        font-family: sans-serif;
+        font-weight: bold;
+        float: left;
+        text-align: center;
+    }
+
+    .codeblock span {
+        vertical-align: baseline;
+    }
+
+    .forward {
+        border-color: black;
+        background-color: blanchedalmond;
+        color:black;
+    }
+
+    .rotatecw90, .rotateccw90 {
+        border-color: black;
+        background-color: blueviolet;
+        color:white;
+    }
+
+    .cut {
+        border-color: black;
+        background-color: lightseagreen;
+        color:black;
+    }
+
+    .diamond {
+        border-color: black;
+        background-color: lightseagreen;
+        color:black;
+    }
+
+    #definitions {
+        flex-shrink: initial;
+    }
+
+    .definition {
+        border-radius: 0.5em;
+        border-color: grey;
+        border-width: 1px;
+        border-style: solid;
+        padding: 0.5em;
+        margin-bottom: 0.25em;
+    }
+
+    .variable {
+        border-radius: 2em;
+        border: 2px solid grey;
+        background-color: cornflowerblue;
+        color: beige;
+        width: 2em;
+        height: 2em;
+        text-align: center;
+        font-weight: bold;
+    }
+
+    .expression {
+        border-radius: 0.25em;
+        border: 2px solid grey;
+        background-color: white;
+        color: black;
+        height: 1em;
+        text-align: center;
+    }
+
+    #instructions, h1 {
+        clear:both;
+    }
+
+    #main {
+        width: 100%;
+        height: 4.8em;
+        background-color: aquamarine;
+        border-style: solid;
+        border-width: 2px;
+        border-color: black;
+    }
+
+    .highlight {
+        border-color: greenyellow;
+        background: green;
+        color: greenyellow;
+    }
+
+    .ondrag {
+        position: absolute;
+        z-index: -1;
+    }
+
+
+    </style>
+    </head>
+<body onload="brython()">
+<!-- <script src="lsystem.py" type="text/python"></script> -->
+<script type="text/python">
+import lsystem as ls
+from browser import document
+
+@document["compute"].bind("click")
+def compute(ev):
+    instr=document['instr'].value
+
+    define = {}
+    for d, e in zip(document.select(".variable"), document.select(".expression")):
+        define[d.value] = e.value;
+
+    rules = {}
+    for p, r in zip(document.select(".pattern"), document.select(".replace")):
+        rules[p.value] = r.value;
+
+    gen_item = document["gen"]
+    generations = int(gen_item.options[gen_item.selectedIndex].value)
+
+    itree = ls.resolve_instructions_by_tree(instr, rules,
+            generations, definitions=define)
+    document["output"].value = itree.to_string()
+    #   print(itree.to_string())
+</script>
+<script type="text/javascript">
+"use strict"
+function DragAndDropHelper(container, classname, horizontal) {
+    // Internal variables to keep track of items
+    var mode = null;
+    var hover_item = null;
+    var drag_item = null;
+
+    this.horizontal = (horizontal !== undefined)? horizontal : true;
+    this.index_count = 0;
+
+    // Drop container
+    this.dropContainer = document.getElementById(container);
+    this.itemClassname = classname;
+
+    // Regular expressions for matching classes and values
+    const val_pat = /([+-]?[0-9\.]+)(%|[a-z]+)*/i;
+    const highlight_pat = / highlight\b/;
+    const ondrag_pat = / ondrag\b/;
+
+    // Mode constants
+    const ADD = "add";
+    const REARRANGE = "rearrange";
+
+    this.allowDrop = function(ev) {
+        ev.preventDefault();
+        var current_obj;
+        var width;
+        var height;
+        var highlight_element = false;
+
+        // Loop through all elements to see if
+        // and subitems are matched
+        Array.from(this.dropContainer.children).forEach( function(value) {
+            // Skip if same
+            if (drag_item === value)
+                return;
+            var rect = value.getBoundingClientRect();
+            // Convert margin to number
+            var lm = val_pat.exec(value.style.marginLeft);
+            var tm = val_pat.exec(value.style.marginTop);
+            // Compensate for left margin
+            if (lm === null)
+                lm = 0;
+            else
+                lm =  (lm[2] == "em") ? lm[1]*16 : lm[1];
+            // Compensate for top margin
+            if (tm === null)
+                tm = 0;
+            else
+                tm =  (tm[2] == "em") ? tm[1]*16 : tm[1];
+
+            // check if it's occupying the item
+            if (ev.x >= rect.left-lm &&
+                ev.x <= rect.right-lm/2 &&
+                ev.y >= rect.top-tm &&
+                ev.y <= rect.bottom-tm/2)
+            {
+                highlight_element = (ev.x >= rect.left && this.horizontal === true || ev.y >= rect.top && this.horizontal === false);
+
+                width = rect.width;
+                height = rect.height;
+                current_obj = value;
+            }
+        }.bind(this));
+
+        // Update state of hovered items
+        if (current_obj != hover_item) {
+            if (hover_item != null) {
+                hover_item.style.marginLeft = "0px";
+                hover_item.style.marginTop = "0px";
+                lowlight(hover_item);
+            }
+
+            hover_item = current_obj;
+
+            if (hover_item != null) {
+                if (this.horizontal) {
+                    hover_item.style.marginLeft = width + "px";
+                } else {
+                    hover_item.style.marginTop = height + "px";
+                }
+            }
+        }
+        // If in add mode, then always update highlight
+        if (mode === ADD && hover_item != null) {
+            if (highlight_element) {
+                highlight(hover_item);
+            } else {
+                lowlight(hover_item);
+            }
+        }
+    }
+
+    function highlight(element) {
+        if (!element.className.includes(" highlight"))
+            element.className = element.className + " highlight";
+    }
+
+    function lowlight(element) {
+        element.className = element.className.replace(highlight_pat,"");
+    }
+
+    this.drag = function(ev) {
+        ev.dataTransfer.setData("text", ev.target.id);
+        mode = ADD;
+    }
+
+    this.removeItem = function(ev) {
+        var target = this.getValidTarget(ev.target);
+        if (target !== null)
+            target.parentElement.removeChild(target);
+    }
+
+    this.dragAndArrange = function (ev) {
+        ev.dataTransfer.setData("text", ev.target.id);
+        drag_item = ev.target;
+        // We have to hide it so the other
+        // items can occupy the chosen items place
+        drag_item.className += " ondrag";
+        // set mode
+        mode = REARRANGE;
+    }
+
+    this.drop = function(ev) {
+        ev.preventDefault();
+        var lMode = mode;
+        mode = null;
+        ev.dataTransfer.dropEffect = "none"
+
+        var id = ev.dataTransfer.getData("text");
+        var node = document.getElementById(id);
+
+        if (node == null)
+            return;
+
+        // if not the main container then
+        // we shall query for replacement
+
+        if (lMode === ADD)
+            if ((ev.target.id !== this.dropContainer.id))
+                this.replace(ev, node)
+            else
+                this.add(ev, node);
+        else if (lMode === REARRANGE)
+            this.arrange(node)
+    }
+
+    this.resetDrag = function(event) {
+        if (hover_item != null) {
+            hover_item.style.marginLeft = "0em";
+            hover_item.style.marginTop = "0em";
+            lowlight(hover_item);
+            hover_item = null;
+        }
+        if (drag_item !== null) {
+            drag_item.style.visibility = "initial";
+            drag_item.className = drag_item.className.replace(ondrag_pat, "");
+            drag_item = null;
+        }
+    }
+
+    this.newNode = function(node) {
+        var element = node.cloneNode(true);
+        element.addEventListener("dragstart", function(e) { this.dragAndArrange(e); }.bind(this), false);
+        element.addEventListener("dragend", function(e) { this.resetDrag(e); }.bind(this), false);
+        element.addEventListener("click", function(e) { this.removeItem(e); }.bind(this), false);
+        element.setAttribute("id", this.dropContainer.id + "__item__" + this.index_count++);
+        return element;
+    }
+
+    this.add = function(ev, node) {
+        var element = this.newNode(node);
+        if (hover_item !== null)
+            ev.target.insertBefore(element, hover_item);
+        else
+            ev.target.appendChild(element);
+    }
+
+    this.arrange = function(node) {
+        if (hover_item !== null) {
+            this.dropContainer.insertBefore(node, hover_item);
+        }
+    }
+
+    this.getValidTarget = function(target) {
+        var lTarget = target;
+        while ((lTarget !== null) && (!lTarget.className.includes(this.itemClassname))) {
+            lTarget = lTarget.parentElement;
+        }
+        return lTarget;
+    }
+
+    this.replace = function(ev, node) {
+        var element = this.newNode(node);
+        var target = this.getValidTarget(ev.target);
+        if (target !== null)
+            this.dropContainer.replaceChild(element, target);
+    }
+
+    this.dropContainer.addEventListener("drop", this.drop.bind(this), false);
+    this.dropContainer.addEventListener("dragover", this.allowDrop.bind(this), false);
+
+    {
+        var _childs = document.getElementsByClassName(this.itemClassname);
+        var _l = _childs.length;
+        var _i = 0;
+
+        for (_i = 0; _i < _l; _i++) {
+            var child = _childs.item(_i);
+            child.addEventListener("dragstart", function(e) { this.drag(e); }.bind(this), false);
+            child.addEventListener("dragend", function(e) { this.resetDrag(e); }.bind(this), false);
+        }
+    }
+}
+
+
+function initDnDContainer(container, classname) {
+    dropContainer = document.getElementById(container);
+    itemClassname = classname;
+    Array.from(document.getElementsByClassName(classname)).forEach(
+        function (element) {
+            element.ondragstart = drag;
+            element.ondragend = resetDrag;
+        }
+    );
+}
+</script>
+<form>
+<h1>Initial Expression</h1>
+<div id="codeblocks">
+    <div class="codeblock forward" id="forward" draggable="true"><span class="fa">&#xf077;</span></div>
+    <div class="codeblock rotatecw90" id="rotatecw90" draggable="true"><span class="fa">&#xf01e;</span></div>
+    <div class="codeblock rotateccw90" id="rotateccw90" draggable="true"><span class="fa">&#xf0e2;</span></div>
+    <div class="codeblock cut" id="cut" draggable="true"><span class="fa">&#xf0c4;</span></div>
+    <div class="codeblock diamond" id="diamond" draggable="true"><span class="fa">&#xf219;</span></div>
+    <div class="codeblock bomb" id="bomb" draggable="true"><span class="fa">&#xf1e2;</span></div>
+    <div class="codeblock coffee" id="coffee" draggable="true"><span class="fa">&#xf0f4;</span></div>
+    <div class="codeblock cube" id="cube" draggable="true"><span class="fa">&#xf1b2;</span></div>
+    <div class="codeblock cubes" id="cubes" draggable="true"><span class="fa">&#xf1b3;</span></div>
+    <div class="codeblock fire" id="fire" draggable="true"><span class="fa">&#xf06d;</span></div>
+    <div class="codeblock fire-extinguisher" id="fire-extinguisher" draggable="true"><span class="fa">&#xf134;</span></div>
+    <div class="codeblock flag" id="flag" draggable="true"><span class="fa">&#xf024;</span></div>
+    <div class="codeblock flask" id="flask" draggable="true"><span class="fa">&#xf0c3;</span></div>
+</div>
+<div id="instructions">
+<div id="main">
+</div>
+</div>
+<script>
+// initDnDContainer("main", "codeblock");
+var dndObject = new DragAndDropHelper("main", "codeblock");
+
+</script>
+<input id="instr" type="text" value="F(1,0)" />
+<label>Generations:</label>
+<select id="gen">
+    <option value="1">1</option>
+    <option value="2">2</option>
+    <option value="3" selected="true">3</option>
+    <option value="4">4</option>
+    <option value="5">5</option>
+    <option value="6">6</option>
+    <option value="7">7</option>
+    <option value="8">8</option>
+    <option value="9">9</option>
+</select>
+<h1>Defines</h1>
+<div id="definitions">
+<div class="definition">
+    <input type="text" value="c" draggable="true" class="variable" />
+    <input type="text" value="1" class="expression" />
+    <input type="button" value="X" class="remove" />
+</div>
+<div class="definition">
+    <input type="text" value="p" class="variable" />
+    <input type="text" value="0.3" class="expression" />
+    <input type="button" value="X" class="remove" />
+</div>
+<div class="definition">
+    <input type="text" value="q" class="variable" />
+    <input type="text" value="c-p" class="expression" />
+    <input type="button" value="X" class="remove" />
+</div>
+<div class="definition">
+    <input type="text" value="h" class="variable" />
+    <input type="text" value="(p*q)^0.5" class="expression" />
+    <input type="button" value="X" class="remove" />
+</div>
+</div>
+<h1>Rules</h1>
+<div id="rules">
+    <div class="rule">
+        <input type="text" value="F(x,t):t==0" class="pattern" />
+        <input type="text" value="F(x*p,2)+F(x*h,1)--F(x*h,1)+F(x*q,0)" class="replace" />
+        <input type="button" value="X" class="remove" />
+    </div>
+    <div class="rule">
+        <input type="text" value="F(x,t):t>0" class="pattern" />
+        <input type="text" value="F(x,t-1)" class="replace" />
+        <input type="button" value="X" class="remove" />
+    </div>
+</div>
+
+<h1>Output<input type="button" id="compute" value="Run" /></h1>
+<textarea id="output" cols="80" rows="10">
+</textarea>
+
+</form>
+</body>
+</html>

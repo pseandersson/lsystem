@@ -75,9 +75,18 @@ def on_mouse_release(x, y, button, modifiers):
 
 @window.event
 def on_key_press(symbol, modifiers):
+    global sc
     if symbol == pyglet.window.key.Q:
         exit()
+    if symbol == pyglet.window.key.PLUS:
+        sc *= 1.05
+    if symbol == pyglet.window.key.MINUS:
+        sc *= 0.95
 
+
+@window.event
+def on_key_release(symbol, modifiers):
+    pass
 
 @window.event
 def on_mouse_drag(x, y, dx, dy, buttons, modifiers):
@@ -155,12 +164,12 @@ class DrawTurtle(object):
         for pVertices in vertex_set:
             vertices = (GLfloat * len(pVertices))(*pVertices)
             glVertexPointer(3, GL_FLOAT, 0, vertices)
-            glDrawArrays(GL_LINE_STRIP, 0, len(vertices) / 3)
+            glDrawArrays(GL_LINE_STRIP, 0, len(vertices) // 3)
 
         for poly in polygons:
             vertices = (GLfloat * len(poly))(*poly)
             glVertexPointer(3, GL_FLOAT, 0, vertices)
-            glDrawArrays(GL_POLYGON, 0, len(vertices) / 3)
+            glDrawArrays(GL_POLYGON, 0, len(vertices) // 3)
         glPopClientAttrib()
         glEndList()
 

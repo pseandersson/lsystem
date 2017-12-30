@@ -57,7 +57,7 @@ rules = {
 i = 3
 mask = int('0xFFFF',16)
 i &=~2
-print (1<<0), i,(mask&~2)&i
+print (1<<0, i,(mask&~2)&i)
 
 print (ls.parse_rule(instr,2,'a>b'))
 print ('---------------------')
@@ -151,8 +151,8 @@ rules ={
 #	'A(s)':'F(s)[+A(s/R)][-A(s/R)]'
 #}
 
-itree = ls.resolve_instructions_by_tree(instr,rules,2,definitions=define)
-print(itree.to_string())
+itree = ls.resolve_instructions_by_tree(instr,rules,4,definitions=define)
+# print(itree.to_string())
 #itree = ls.resolve_instructions_by_tree(itree,rules,1,ignore=ignore)
 #print itree.to_string()
 #itree = ls.resolve_instructions_by_tree(itree,rules,1,ignore=ignore)
@@ -163,7 +163,7 @@ print(itree.to_string())
 #print itree.to_string()
 turtle = t.turtle_tree(itree,X0,R0,r0,stepsize,delta,dr)
 
-print(turtle[2])
+#print(turtle[2])
 print('Done!')
 
 draw_turtle(turtle)

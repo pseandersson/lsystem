@@ -1,10 +1,7 @@
-
 lsystem.pyc
-
 lviewer.pyc
-
 turtle.pyc
-
 opengl_test.py
-
 pointcloud1.csv
+__pycache__/
+.vscode/

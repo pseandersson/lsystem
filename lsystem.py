@@ -5,8 +5,9 @@
 # --------------------
 import string
 import types
-import numpy as np
-from numpy.random import random as rand
+#import numpy as np
+#from numpy.random import random as rand
+from random import random as rand
 
 SUBSCRIPT       = (1<<0)
 LOOK_BEFORE     = (1<<1)
@@ -180,7 +181,7 @@ class LNode(object):
 
 	"""Returns all arguments of node"""
 	def getArguments(self):
-		return arguments
+		return self.arguments
 
 	"""Update the depth for the nodes predecessor"""
 	def updateMaxDepth(self,depth):
@@ -578,9 +579,8 @@ class Rule(object):
 					self.prob_rules.append(rule)
 			except StopIteration:
 				pass
+			self.cs[:] = [ x / self.cs[-1] for x in self.cs]
 
-			self.cs = np.array(self.cs,dtype=float)
-			self.cs /= self.cs.max()
 		else:
 			self.prob_rules.append(consequences)
 
@@ -1095,10 +1095,10 @@ def resolve_instructions_by_tree(instr,rules,nmax,**extras):
 		law_book.append(Rule(law, conseq,ignore))
 	itree = LTree();
 
-	if type(instr)==type(LTree()):
-		itree = instr
-	else:
+	if type(instr)==type(str()):
 		itree << instr
+	else:
+		itree = instr
 
 	for n in range(1,nmax+1):
 		node = itree.chop()

@@ -2,6 +2,7 @@ import lsystem as ls
 import turtle as t
 import numpy as np
 import string
+import cProfile
 from lviewer import *
 
 figures ={'L':'','R':''}
@@ -37,9 +38,9 @@ rules = {
 #give matching algorithm acces to
 #the whole string.
 #rules = {
-	# Probabilities
+    # Probabilities
 #	'A':{'AB':1,'BA':1}
-	# Conditional
+    # Conditional
 #	'B>A':'AB',
 #	'A<B':'BB',
 #	'A<B>A':'BB',
@@ -130,18 +131,18 @@ B = ls.LTree() << 'B(x)'
 instr='F(1,0)'
 #
 define = {
-	'c':'1',
-	'p':'0.3',
-	'q':'c-p',
-	'h':'(p*q)^0.5'
+    'c':'1',
+    'p':'0.3',
+    'q':'c-p',
+    'h':'(p*q)^0.5'
 }
 #
 #rules= {
 #	'F(x)':'F(x*p)+F(x*h)--F(x*h)+F(x*q)'
 #}
 rules ={
-	'F(x,t):t==0':'F(x*p,2)+F(x*h,1)--F(x*h,1)+F(x*q,0)',
-	'F(x,t):t>0':'F(x,t-1)'
+    'F(x,t):t==0':'F(x*p,2)+F(x*h,1)--F(x*h,1)+F(x*q,0)',
+    'F(x,t):t>0':'F(x,t-1)'
 }
 #define = {
 #	'R':'1.456'
@@ -150,8 +151,15 @@ rules ={
 #rules= {
 #	'A(s)':'F(s)[+A(s/R)][-A(s/R)]'
 #}
+bench_sys = ls.LSystem()\
+        .set_definitions(define)\
+        .set_rules(rules)\
+        .set_max_iterations(14)
 
-itree = ls.resolve_instructions_by_tree(instr,rules,4,definitions=define)
+# ls.resolve_instructions_by_tree(instr,rules,14,definitions=define)
+# cProfile.run('itree = ls.resolve_instructions_by_tree(instr,rules,14,definitions=define)', 'restats')
+cProfile.run('itree = bench_sys.solve(instr)', 'restats')
+# itree = ls.resolve_instructions_by_tree(instr,rules,4,definitions=define)
 # print(itree.to_string())
 #itree = ls.resolve_instructions_by_tree(itree,rules,1,ignore=ignore)
 #print itree.to_string()
@@ -161,9 +169,24 @@ itree = ls.resolve_instructions_by_tree(instr,rules,4,definitions=define)
 #print itree.to_string()
 
 #print itree.to_string()
+# itree = ls.LSystem()\
+#     .set_rules({
+#         '0<0>0':'0',
+#         '0<0>1':'1[-F1F1]',
+#         '0<1>0':'1',
+#         '0<1>1':'1',
+#         '1<0>0':'0',
+#         '1<0>1':'1F1',
+#         '1<1>0':'1',
+#         '1<1>1':'0',
+#         '*<+>*':'-',
+#         '*<->*':'+'
+#     })\
+#     .set_ignore('F+-')\
+#     .set_max_iterations(12)\
+#     .solve('F1F1F1')
 turtle = t.turtle_tree(itree,X0,R0,r0,stepsize,delta,dr)
-
-#print(turtle[2])
+#print(itree.to_string())
 print('Done!')
 
 draw_turtle(turtle)

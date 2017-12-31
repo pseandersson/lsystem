@@ -1,5 +1,15 @@
 import unittest
-from lsystem import calculate
+from lsystem import calculate, Calculator
+
+# class TestCalculator(unittest.TestCase):
+#     """Class to test a faster calculator"""
+#     def test_single(self):
+#         c = Calculator()
+#         self.assertEqual(c.calc('1'), 1.0)
+
+#     def test_addition(self):
+#         c = Calculator()
+#         self.assertEqual(c.calc('1+2'), 3.0)
 
 class TestCalculateMethod(unittest.TestCase):
     """Class which tests the calculate part of lsystem"""

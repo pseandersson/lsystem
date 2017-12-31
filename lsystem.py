@@ -1,17 +1,11 @@
-#!/usr/bin/env python
-# --------------------
-# Copyright (C) 2016 Patrik Andersson
-# All rights reserved
-# --------------------
+"""
+// ================================== \\
+  Copyright (C) 2016 Patrik Andersson
+          All rights reserved
+\\=================================== //
+"""
 
 from random import random as rand
-
-SUBSCRIPT = (1 << 0)
-LOOK_BEFORE = (1 << 1)
-LOOK_AFTER = (1 << 2)
-BRACKETS = (1 << 3)
-BRACKET_ERROR = (1 << 4)
-FUNC_DEF = (1 << 5)
 
 NUMS = '0123456789.'
 MATH_OP = '+-*/^v'
@@ -37,7 +31,10 @@ def calculate(instr):
 
         # check if we are not in a bracket
         # context
-        if bracket_count == 0:
+        if bracket_count is 0:
+             # Store operatator
+            if instr[i] in MATH_OP:
+                cur_op = instr[i]
             # Add numerical value to the
             # value string
             if instr[i] in NUMS:
@@ -46,13 +43,14 @@ def calculate(instr):
             # value string is empty use it
             # as a sign indicator
             elif instr[i] == '-' and \
-                    (val_str == '' or val_str[-1] == 'e') and bracket_val is None:
-                if bracket_count == 0:
-                    lvalue = -1
-                    cur_op = '*'
+                    (val_str == '' or val_str[-1] == 'e')\
+                     and bracket_val is None:
+                lvalue = -1.0
+                cur_op = '*'
+
                 if val_str and val_str[-1] is 'e':
                     val_str += instr[i]
-                    lvalue = 1
+                    lvalue = 1.0
             elif instr[i] == 'e' and \
                     val_str != '' and\
                     val_str[-1] != '-':
@@ -72,9 +70,6 @@ def calculate(instr):
                     lvalue = bracket_val
                     bracket_val = None
 
-                # Store operatator
-                if instr[i] in MATH_OP:
-                    cur_op = instr[i]
                 # If a bracket context is
                 # at beginning, enable lazy brackets
                 # so it is possible to write
@@ -93,6 +88,8 @@ def calculate(instr):
                         calculate(instr[bracket_start:i])
             elif instr[i] is '(':
                 bracket_count += 1
+            i += 1
+            continue
 
         if mem_val_base != None and lvalue != None:
             lvalue = pow(mem_val_base, lvalue)
@@ -159,7 +156,8 @@ class LNode(object):
             for i in range(0, self.get_argument_count()):
                 arg_expr = self.get_argument(i)
                 for key, value in args.items():
-                    arg_expr = arg_expr.replace(key, '(' + value + ')')
+                    # arg_expr = arg_expr.replace(key + '(', value + '*(')
+                    arg_expr = arg_expr.replace(key, value)
                 self.arguments[i] = str(calculate(arg_expr))
 
     def has_arguments(self):
@@ -216,8 +214,7 @@ class LNode(object):
 
     def is_child(self):
         """Check if current node is a child node or not"""
-        return (not self.is_branch() and not self.is_root())
-
+        return not self.is_branch() and not self.is_root()
 
     def is_root(self):
         """Check if current node is root or not"""
@@ -228,7 +225,7 @@ class LNode(object):
         if self.is_root():
             raise StopIteration
         else:
-            if (self.predecessor.val == '['):
+            if self.predecessor.val == '[':
                 return self.predecessor.up()
             else:
                 return self.predecessor
@@ -255,11 +252,7 @@ class LNode(object):
 
     def has_childs(self):
         """Check wheter the node has childs or not"""
-        if self.childs:
-            return True
-        else:
-            return False
-
+        return bool(self.childs)
 
     def last_child(self):
         """Internal function for prev()"""
@@ -478,6 +471,13 @@ class Rule(object):
     DETERMINISTIC_RULE = 0
     STOCHASTIC_RULE = (1 << 0)
 
+    SUBSCRIPT = (1 << 0)
+    LOOK_BEFORE = (1 << 1)
+    LOOK_AFTER = (1 << 2)
+    BRACKETS = (1 << 3)
+    BRACKET_ERROR = (1 << 4)
+    FUNC_DEF = (1 << 5)
+
     def __init__(self, initstr, consequences, ignore=''):
         self.flag = 0
         self.key = None
@@ -504,20 +504,20 @@ class Rule(object):
         commas = []
         while i < len(initstr):
             if initstr[i] == '<':
-                self.flag |= LOOK_BEFORE
+                self.flag |= self.LOOK_BEFORE
                 less_pos = i + 1
             elif initstr[i] == '>':
-                self.flag |= LOOK_AFTER
+                self.flag |= self.LOOK_AFTER
                 great_pos = i
             elif initstr[i] == '(':
-                self.flag |= BRACKETS
-                self.flag |= BRACKET_ERROR
+                self.flag |= self.BRACKETS
+                self.flag |= self.BRACKET_ERROR
                 bracket_count += 1
             elif initstr[i] == ')':
-                self.flag &= ~BRACKET_ERROR
+                self.flag &= ~self.BRACKET_ERROR
                 bracket_count -= 1
             elif initstr[i] == ':':
-                self.flag |= FUNC_DEF
+                self.flag |= self.FUNC_DEF
                 break
             elif initstr[i] == ',':
                 commas.append(i)
@@ -525,21 +525,21 @@ class Rule(object):
 
         key_string = None
 
-        if self.flag & FUNC_DEF:
+        if self.flag & self.FUNC_DEF:
             key_string = initstr[0:i]
         else:
             key_string = initstr
 
         self.key = (LTree() << key_string[less_pos:great_pos]).chop()
 
-        if self.flag & LOOK_BEFORE:
+        if self.flag & self.LOOK_BEFORE:
             self.less = (
                 LTree() << key_string[0:less_pos - 1]).chop(make_depth=True)
 
-        if self.flag & LOOK_AFTER:
+        if self.flag & self.LOOK_AFTER:
             self.greater = (LTree() << key_string[great_pos + 1:]).chop()
 
-        if self.flag & FUNC_DEF:
+        if self.flag & self.FUNC_DEF:
             self.setup_func(initstr[(i + 1):])
 
     def setup_func(self, funcstr):
@@ -592,7 +592,7 @@ class Rule(object):
         if not self.simple_rule_match(self.key, node):
             return False, None
         # print 'Key', self.key.val
-        if self.flag & LOOK_BEFORE:
+        if self.flag & self.LOOK_BEFORE:
             lnode = node
             try:
                 for i in range(self.less.depth):
@@ -607,7 +607,7 @@ class Rule(object):
             except StopIteration:
                 return False, None
 
-        if self.flag & LOOK_AFTER:
+        if self.flag & self.LOOK_AFTER:
             try:
                 if self.match(node.next(), self.greater):
                     af_node = node.next()
@@ -628,7 +628,7 @@ class Rule(object):
         state = True
 
         # Evaluate function
-        if self.flag & FUNC_DEF:
+        if self.flag & self.FUNC_DEF:
             # Might be useful in the future
             # if self.key.get_argument_count()!=\
             #	node.get_argument_count():
@@ -677,7 +677,7 @@ class Rule(object):
         then it returns the replacement string otherwise None."""
         success, arglist = self.trial(case_str)
         if success:
-            if self.cs == None:
+            if self.cs is None:
                 return self.return_rule(arglist)
             else:
                 r = rand()
@@ -726,10 +726,7 @@ class Rule(object):
                         i += 1
                         j += 1
 
-                    if i == len(b.childs):
-                        return True
-                    else:
-                        return False
+                    return bool(i == len(b.childs))
                 elif a.has_childs() and not b.has_childs():
                     return True
                 elif not a.has_childs() and b.has_childs():
@@ -757,308 +754,14 @@ class Rule(object):
                 return False
         elif isinstance(b, str):
             #			print 'TXT:',self.val,'==',b
-            if a.val == b and not a.has_childs():
-                return True
-            else:
-                return False
+            return bool(a.val == b and not a.has_childs())
         else:
             return False
-
-# Deprecated
-def look(instr, pos, bf_str, ldir, ignore):
-    is_ok = False
-    s = len(bf_str)
-    i = pos
-    npos = pos
-    new_context = 0
-    exit_context = 0
-    same_con = True
-    tmp_str_list = []
-    tmp_str_list.append([])
-    tmp_str = tmp_str_list[-1]
-
-    while i > 0 and i + 1 < len(instr):
-        i += ldir
-        tmp = str().join(tmp_str)
-        ts = s - len(tmp)
-
-        if exit_context == new_context:
-            if exit_context == 0:
-                same_con = True
-            else:
-                same_con = False
-        elif exit_context > new_context:
-            same_con = True
-        else:
-            same_con = False
-
-        if instr[i] == '[':
-            npos = i
-            exit_context += 1
-        elif instr[i] == ']':
-            new_context += 1
-        elif bf_str == instr[i:i + ts] + tmp:
-            is_ok = True
-            break
-        elif instr[i] in ignore:
-            continue
-        elif (npos - i) < s:
-            tmp_str.insert(0, instr[i])
-            continue
-        elif same_con:
-            return False
-    return is_ok
-
-
-# Deprecated
-def parse_rule(instr, pos, rule, ignore=''):
-    bracket_count = 0
-    commas = []
-    less_pos = 0
-    great_pos = 0
-    flag = 0
-    var_length = 1
-    i = 0
-
-    while i < len(rule):
-        if rule[i] == '<':
-            flag |= LOOK_BEFORE
-            less_pos = i
-        elif rule[i] == '>':
-            flag |= LOOK_AFTER
-            great_pos = i
-        elif rule[i] == '(':
-            flag |= BRACKETS
-            flag |= BRACKET_ERROR
-            bracket_count += 1
-        elif rule[i] == ')':
-            flag &= ~BRACKET_ERROR
-            bracket_count -= 1
-        elif rule[i] == ':':
-            flag |= FUNC_DEF
-            break
-        elif rule[i] == ',':
-            commas.append(i)
-        elif rule[i] == '_':
-            flag |= SUBSCRIPT
-        i += 1
-
-    if flag & SUBSCRIPT:
-        var_length += 2
-
-    if pos + var_length > len(instr):
-        return False
-
-    if flag & LOOK_BEFORE:
-        bf_str = rule[0:less_pos]
-        less_pos += 1
-
-    if flag & LOOK_AFTER:
-        af_str = rule[great_pos + 1:i]
-
-    key = rule[less_pos:(less_pos + var_length)]
-
-    is_ok = (instr[pos:pos + var_length] == key)
-    if not is_ok:
-        return False
-
-    # Check if condition is met
-    if flag & LOOK_BEFORE:
-        is_ok = look(instr, pos, bf_str, 1, ignore)
-
-    if not is_ok:
-        return False
-
-    if flag & LOOK_AFTER:
-        # print 'Looking for', af_str, 'after', key
-        is_ok = False
-        s = len(af_str)
-        i = pos
-        while i + 1 < len(instr):
-            i += 1
-            if af_str == instr[i:i + s]:
-                is_ok = True
-                break
-            elif instr[i] in ignore:
-                continue
-            elif (i - pos) < s:
-                continue
-            else:
-                return False
-
-    if not is_ok:
-        return False
-
-    return True
-    # Parse function definitions
-    if i < len(rule):
-        if rule[i] == ':':
-            i += 1
-
-# Deprecated
-def parse_rule_tree(node, rule, ignore=''):
-    bracket_count = 0
-    commas = []
-    less_pos = 0
-    great_pos = 0
-    flag = 0
-    var_length = 1
-    i = 0
-    is_ok = False
-
-    while i < len(rule):
-        if rule[i] == '<':
-            flag |= LOOK_BEFORE
-            less_pos = i
-        elif rule[i] == '>':
-            flag |= LOOK_AFTER
-            great_pos = i
-        elif rule[i] == '(':
-            flag |= BRACKETS
-            flag |= BRACKET_ERROR
-            bracket_count += 1
-        elif rule[i] == ')':
-            flag &= ~BRACKET_ERROR
-            bracket_count -= 1
-        elif rule[i] == ':':
-            flag |= FUNC_DEF
-            break
-        elif rule[i] == ',':
-            commas.append(i)
-        elif rule[i] == '_':
-            flag |= SUBSCRIPT
-        i += 1
-
-    if flag & SUBSCRIPT:
-        var_length += 2
-
-    if flag & LOOK_BEFORE:
-        bf_str = rule[0:less_pos]
-        less_pos += 1
-
-    if flag & LOOK_AFTER:
-        af_str = rule[great_pos + 1:i]
-
-    key = rule[less_pos:(less_pos + var_length)]
-
-    if node.val != key:
-        return False
-
-    # Check if condition is met
-    if flag & LOOK_BEFORE:
-        bf_rule = (LTree() << bf_str).chop()
-        lnode = node
-        is_ok = False
-        try:
-            for i in range(bf_rule.depth):
-                lnode = lnode.up()
-
-            if lnode.match(bf_rule):
-                is_ok = True
-        except StopIteration:
-            is_ok = False
-
-    if not is_ok:
-        return False
-
-    if flag & LOOK_AFTER:
-        # print 'Looking for', af_str, 'after', key
-        af_rule = (LTree() << af_str).chop()
-        lnode = node.next()
-        is_ok = lnode.match(af_rule)
-
-    if not is_ok:
-        return False
-
-    return True
-
-    # Parse function definitions
-    if i < len(rule):
-        if rule[i] == ':':
-            i += 1
-
-# Deprecated
-def lookup(instr, pos, d, key):
-    for k in d.keys():
-        if key == k:
-            return True, k
-        else:
-            if parse_rule(instr, pos, k):
-                return True, k
-    return False, None
-
-# Deprecated
-def tree_lookup(itree, d):
-    for k in d.keys():
-        if itree == k:
-            return True, k
-        else:
-            if parse_rule_tree(itree, k):
-                return True, k
-    return False, None
-
-#Deprecated
-def resolve_prob_rule(rules):
-    weight = 0.
-    itr = iter(rules)
-    prob_rules = []
-    cs = [0.]
-    try:
-        while True:
-            rule = itr.next()
-            prob = rules[rule]
-            cs.append(prob + cs[-1])
-            prob_rules.append(rule)
-    except StopIteration:
-        pass
-
-    cs[:] = [x / cs[-1] for x in cs]
-
-    r = rand(1)
-
-    for k in range(0, len(cs)):
-        if r < cs[k]:
-            return prob_rules[k - 1]
-
-#Deprecated
-def resolve_instructions(instr, rules, nmax, figures=dict()):
-
-    for n in range(1, nmax + 1):
-        oldstr = instr
-        instr = ''
-        sLen = len(oldstr)
-        i = 0
-        oi = 0
-        while i < sLen:
-            key = oldstr[i]
-            oi = i
-            if (i + 2 < sLen):
-                if (oldstr[i + 1] == "_"):
-                    key = key + "_" + oldstr[i + 2]
-                    i = i + 2
-
-            rule_exists, rkey = lookup(oldstr, oi, rules, key)
-
-            if rule_exists:
-                if isinstance(rules[rkey], str):
-                    instr = instr + rules[rkey]
-                elif isinstance(rules[rkey], dict):
-                    instr = instr + resolve_prob_rule(rules[rkey])
-
-            else:
-                instr = instr + key
-            i += 1
-
-        # print 'n=',n,', ', instr
-    if (len(figures.keys()) > 0):
-        instr = resolve_instructions(instr, figures, 1)
-    return instr
 
 
 class LSystem(object):
     """Builder pattern to create a tree"""
     def __init__(self):
-        self.instr = ''
         self.rules = []
         self.rules_dict = {}
         self.nmax = -1
@@ -1121,7 +824,9 @@ class LSystem(object):
             # Resolve all predefined variables
             if self.definitions:
                 for key, value in self.definitions.items():
-                    conseq = conseq.replace(key, '(' + value + ')')
+                    conseq = conseq.replace(key + '(', value + '*')
+                    conseq = conseq.replace(key, value)
+                print('conseq', conseq)
             self.rules.append(Rule(law, conseq, self.ignore))
 
     def set_rules(self, rules):
@@ -1178,77 +883,3 @@ class LSystem(object):
         if self.figures:
             self.__solve(self.figures)
         return self.itree
-
-def resolve_instructions_by_tree(instr, rules, nmax, **extras):
-    law_book = []
-    figures = None
-    ignore = ''
-    definitions = None
-
-    if 'figures' in extras.keys():
-        if isinstance(extras['figures'], dict):
-            figures == extras['figures']
-        else:
-            raise ValueError
-
-    if 'ignore' in extras.keys():
-        if isinstance(extras['ignore'], str):
-            ignore = extras['ignore']
-        else:
-            raise ValueError
-
-    # Resolve parametric input
-    if 'definitions' in extras.keys():
-        if isinstance(extras['definitions'], dict):
-            definitions = dict()
-            for key, value in extras['definitions'].items():
-                definitions[key] = value
-            changes_made = True
-            while changes_made:
-                changes_made = False
-                for key, value in definitions.items():
-                    for k1, v1 in definitions.items():
-                        v0 = value
-                        value = value.replace(k1, '(' + v1 + ')')
-                        if not v0 == value:
-                            changes_made = True
-                    definitions[key] = value
-            for key, value in definitions.items():
-                definitions[key] = str(calculate(value))
-
-    for law, conseq in rules.items():
-        if definitions:
-            for key, value in definitions.items():
-                conseq = conseq.replace(key, '(' + value + ')')
-        law_book.append(Rule(law, conseq, ignore))
-    itree = LTree()
-
-    if isinstance(instr, str):
-        itree << instr
-    else:
-        itree = instr
-
-    for n in range(1, nmax + 1):
-        node = itree.chop()
-        while True:
-            new_str = None
-
-            for rule in law_book:
-                new_str = rule.try_case(node)
-                if new_str != None:
-                    break
-
-            if new_str != None:
-                itree << new_str
-            else:
-                itree << node.to_string()
-
-            try:
-                node = node.next()
-            except StopIteration:
-                break
-    #instr = itree.to_string()
-    # print 'n=',n,', ', instr
-    if figures:
-        itree = resolve_instructions_by_tree(itree, figures, 1)
-    return itree

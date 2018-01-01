@@ -21,5 +21,27 @@ class LNodeIteratorTests(unittest.TestCase):
             count += 1
         self.assertEqual(count, 2)
 
+    def test_iterate_higharchy_item(self):
+        """Test if the iterator works in higharchies items"""
+        node = LNode('A')
+        bnode = node.add_child('B')
+        node.add_child('C')
+        itr = LNodeIterator(bnode)
+        count = 0
+        for n in itr:
+            count += 1
+        self.assertEqual(count, 2)
+
+    def test_iterate_higharchy_item_last(self):
+        """Test if the iterator works in higharchies items"""
+        node = LNode('A')
+        node.add_child('B')
+        C = node.add_child('C')
+        itr = LNodeIterator(C)
+        count = 0
+        for n in itr:
+            count += 1
+        self.assertEqual(count, 1)
+
 if __name__ == "__main__":
     unittest.main()

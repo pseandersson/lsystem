@@ -7,121 +7,7 @@
 
 from random import random as rand
 
-NUMS = '0123456789.'
-MATH_OP = '+-*/^v'
-
-def calculate(instr):
-    """Global functions to resolve mathematical expression
-    such as: 2((5e-1-2)+1)/3+2*(4)"""
-    instr += ' '  # Add end padding to simplify algo
-    mem_val = None
-    mem_val_base = None
-    rvalue = 0.0
-    last_op = ''
-    val_str = ''
-    bracket_start = None
-    bracket_val = None
-    bracket_count = 0
-
-    i = 0
-    _len = len(instr)
-    while i < _len:
-        lvalue = None
-        cur_op = None
-
-        # check if we are not in a bracket
-        # context
-        if bracket_count is 0:
-             # Store operatator
-            if instr[i] in MATH_OP:
-                cur_op = instr[i]
-            # Add numerical value to the
-            # value string
-            if instr[i] in NUMS:
-                val_str += instr[i]
-            # if a minus sign present and
-            # value string is empty use it
-            # as a sign indicator
-            elif instr[i] == '-' and \
-                    (val_str == '' or val_str[-1] == 'e')\
-                     and bracket_val is None:
-                lvalue = -1.0
-                cur_op = '*'
-
-                if val_str and val_str[-1] is 'e':
-                    val_str += instr[i]
-                    lvalue = 1.0
-            elif instr[i] == 'e' and \
-                    val_str != '' and\
-                    val_str[-1] != '-':
-                val_str += instr[i]
-            # Otherwise try to resolve the value
-            else:
-                if val_str:
-                    try:
-                        lvalue = float(val_str)
-                        val_str = ''
-                    except ValueError:
-                        pass
-                # bracket values are returned in the
-                # next loop of the string so it has
-                # correspondance to an operator
-                elif bracket_val != None:
-                    lvalue = bracket_val
-                    bracket_val = None
-
-                # If a bracket context is
-                # at beginning, enable lazy brackets
-                # so it is possible to write
-                # 2(3-1) = 4
-                if instr[i] is '(':
-                    if lvalue is not None and cur_op is None:
-                        cur_op = '*'
-                    bracket_count += 1
-                    bracket_start = i + 1
-        else:
-            # end bracket context
-            if instr[i] is ')':
-                bracket_count -= 1
-                if bracket_count is 0:
-                    bracket_val =\
-                        calculate(instr[bracket_start:i])
-            elif instr[i] is '(':
-                bracket_count += 1
-            i += 1
-            continue
-
-        if mem_val_base != None and lvalue != None:
-            lvalue = pow(mem_val_base, lvalue)
-            mem_val_base = None
-
-        # Do math operations
-        if lvalue is not None:
-            if mem_val is None:
-                mem_val = lvalue
-            else:
-                if cur_op == '^':
-                    mem_val_base = lvalue
-                    cur_op = last_op
-                elif last_op is '+':
-                    rvalue += mem_val
-                    mem_val = lvalue
-                elif last_op == '-':
-                    rvalue += mem_val
-                    mem_val = -lvalue
-                elif last_op is '*':
-                    mem_val *= lvalue
-                elif last_op is '/':
-                    mem_val /= lvalue
-                elif last_op == '^':
-                    mem_val = pow(mem_val, lvalue)
-
-        if cur_op != None:
-            last_op = cur_op
-        i += 1
-    if mem_val != None:
-        rvalue += mem_val
-    return rvalue
+from lmath import calculate
 
 class LNode(object):
     """LNode is a node in a tree graph representing one command in the Liedermayer system.
@@ -147,6 +33,9 @@ class LNode(object):
             return self.val == b
         else:
             return NotImplemented
+
+    def get_predecessor(self):
+        return self.predecessor
 
     def set_arguments(self, args):
         """set_arguments of node"""
@@ -444,26 +333,61 @@ class LNodeIterator(object):
     def __next__(self):
         """Go to next function in the string-space"""
         while self.child_iter:
-            for node in self.child_iter[-1]:
-                self.child_iter.append(iter(node.get_childs()))
-                return node
+            for self.node in self.child_iter[-1]:
+                self.child_iter.append(iter(self.node.get_childs()))
+                return self.node
 
             self.child_iter.pop()
+
+        while not self.node.is_root():
+            itr = iter(self.node.predecessor.get_childs())
+            is_last = False
+            for node in itr:
+                if is_last:
+                    is_last = False
+                    self.node = node
+                    break
+                if node is self.node:
+                    is_last = True
+                    self.child_iter.append(itr)
+                    self.node = self.node.predecessor
+
+            if not is_last:
+                for self.node in self.child_iter[-1]:
+                    self.child_iter.append(iter(self.node.get_childs()))
+                return self.node
+
+
+            # for node in self.child_iter[-1]:
+            #     self.child_iter.append(iter(node.get_childs()))
+            #     return node
+
+            # last_node = self.child_iter.pop()
+
+        raise StopIteration
 
         # TODO might be necessary to check if it's root
         # and work the way up
 
-        raise StopIteration
 
 class LNodeUpIterator(object):
     """Class to iterate backwards"""
-    def __init__(self, first_node: LNode):
+    def __init__(self, first_node: LNode, ignore: set, max_depth=-1, ):
         self.node = first_node
+        self.max_depth = max_depth
+        self.ignore = ignore
 
     def __iter__(self):
         return self
 
     def __next__(self):
+        self.node = self.node.predecessor
+        while self.node is not None and self.node.val in self.ignore:
+            self.node = self.node.predecessor
+
+        if self.node is None or self.max_depth is 0:
+            raise StopIteration
+        self.max_depth -= 1
         return self.node
 
 class Rule(object):
@@ -478,7 +402,7 @@ class Rule(object):
     BRACKET_ERROR = (1 << 4)
     FUNC_DEF = (1 << 5)
 
-    def __init__(self, initstr, consequences, ignore=''):
+    def __init__(self, initstr, consequences, ignore= set()):
         self.flag = 0
         self.key = None
         self.less = None
@@ -491,12 +415,14 @@ class Rule(object):
         self.fn_str = None
         self.cmp_str = None
         self.ignore = ignore
+        self.back_ignore = ignore.union('[')
         self.type = self.DETERMINISTIC_RULE
 
         self.setup_case(initstr)
         self.setup_consequences(consequences)
 
     def setup_case(self, initstr):
+        """Setup the instructions for the trial case"""
         i = 0
         less_pos = None
         great_pos = None
@@ -543,6 +469,7 @@ class Rule(object):
             self.setup_func(initstr[(i + 1):])
 
     def setup_func(self, funcstr):
+        """Set up the functions using during comparison"""
         funcstrs = funcstr.split('&&')
         for fnstr in funcstrs:
             cmp_type = ''
@@ -565,6 +492,7 @@ class Rule(object):
             self.functions.append((fn_str, cmp_str, cmp_type))
 
     def setup_consequences(self, consequences):
+        """Setup the consequences"""
         if isinstance(consequences, dict):
             self.type = self.STOCHASTIC_RULE
             itr = iter(consequences)
@@ -606,6 +534,17 @@ class Rule(object):
                     bf_node = lnode
             except StopIteration:
                 return False, None
+            # if node.is_root() or self.less.depth is 0:
+            #     return False, None
+            # itr = LNodeUpIterator(node, self.back_ignore, self.less.depth)
+            # lnode = node
+            # for inode in itr:
+            #     lnode = inode
+
+            # if lnode is None or not self.match(lnode, self.less):
+            #     return False, None
+            # else:
+            #     bf_node = lnode
 
         if self.flag & self.LOOK_AFTER:
             try:
@@ -768,7 +707,7 @@ class LSystem(object):
         self.itree = LTree()
         self.figures = []
         self.definitions = {}
-        self.ignore = ''
+        self.ignore = set()
 
     def set_figures(self, figures: dict):
         """Set figures, e.g.  figures = {'L':'','R':''}"""
@@ -778,7 +717,7 @@ class LSystem(object):
 
     def set_ignore(self, ignore: str):
         """Ignore certain syntax, e.g. ignore = '+-F'"""
-        self.ignore = ignore
+        self.ignore = set(ignore)
         return self
 
     def set_definitions(self, definitions: dict):
@@ -879,6 +818,7 @@ class LSystem(object):
         self.__resolve_rules()
 
         for n in range(self.nmax):
+            print('Iteration:', n)
             self.__solve(self.rules)
         if self.figures:
             self.__solve(self.figures)

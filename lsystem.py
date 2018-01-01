@@ -7,7 +7,7 @@
 
 from random import random as rand
 
-from lmath import calculate
+from lmath import calculate, Expression
 
 class LNode(object):
     """LNode is a node in a tree graph representing one command in the Liedermayer system.
@@ -191,7 +191,7 @@ class LNode(object):
                     return self.next_at_parent()
 
 
-    def to_string(self, traverse=False):
+    def to_string(self, traverse=False, newline=False, indent=1):
         """Returns the string, building up the node-scheme"""
         tstr = self.val
         if self.has_arguments():
@@ -203,8 +203,12 @@ class LNode(object):
                 else:
                     tstr += ')'
         if traverse:
-            for node in self.childs:
-                tstr += str(node.to_string(traverse))
+            if newline:
+                for node in self.childs:
+                    tstr += '\n' +  ' '*indent + str(node.to_string(traverse, newline, indent+1))
+            else:
+                for node in self.childs:
+                    tstr += str(node.to_string(traverse))
         return tstr
 
 
@@ -216,6 +220,96 @@ class LNode(object):
         for node in self.childs:
             node.print_tree(indent + 2)
 
+class LNodeIterator(object):
+    """An iterator class to loop over LNodeItems"""
+    def __init__(self, first_node: LNode):
+        self.node = None
+        self.child_iter = [iter([first_node])]
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        """Go to next function in the string-space"""
+        while self.child_iter:
+            for self.node in self.child_iter[-1]:
+                self.child_iter.append(iter(self.node.get_childs()))
+                return self.node
+
+            self.child_iter.pop()
+
+        # This code is to force the iterator to continue if
+        # the initial item is in the middle of the tree.
+        while not self.node.is_root():
+            itr = iter(self.node.predecessor.get_childs())
+            is_last = False
+            for node in itr:
+                if is_last:
+                    is_last = False
+                    self.node = node
+                    break
+                if node is self.node:
+                    is_last = True
+                    self.child_iter.append(itr)
+                    self.node = self.node.predecessor
+
+            if not is_last:
+                for self.node in self.child_iter[-1]:
+                    self.child_iter.append(iter(self.node.get_childs()))
+                return self.node
+
+        raise StopIteration
+
+        # TODO might be necessary to check if it's root
+        # and work the way up
+
+class LNodeUpIterator(object):
+    """Class to iterate backwards"""
+    def __init__(self, first_node: LNode, ignore: set, max_depth=-1, ):
+        self.node = first_node
+        self.max_depth = max_depth
+        self.ignore = ignore
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        self.node = self.node.predecessor
+        while self.node is not None and self.node.val in self.ignore:
+            self.node = self.node.predecessor
+
+        if self.node is None or self.max_depth is 0:
+            raise StopIteration
+        self.max_depth -= 1
+        return self.node
+
+class LNodeInsertIterator:
+    """An iterator class which enabling insert a copy of
+       an other node(s) or node-tree into a existing tree.
+       At each iteration, one can customize each individually
+       e.g. applying arguments expressions"""
+    def __init__(self, target, source):
+        self.node = target
+        self.child_iters = [(iter(source.get_childs()), target.add_child(source.val))]
+
+    def get_end_node(self):
+        return self.node
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        while self.child_iters:
+            for self.node in self.child_iters[-1][0]:
+                self.child_iters.append(\
+                    (iter(self.node.get_childs()),\
+                     self.child_iters[-1][1].add_child(self.node.val)))
+                self.node = self.child_iters[-1][1]
+                return self.child_iters[-1][1]
+
+            self.child_iters.pop()
+
+        raise StopIteration
 
 class LTree(object):
     """LTree is a class to organize L-System instructions into LNode's.
@@ -223,10 +317,11 @@ class LTree(object):
     function. The chop()-function gives access to the nodes and remove
     their relationship to LTree so new trees can grow up there"""
 
-    def __init__(self, initstr=None):
+    def __init__(self, initstr=None, parse_args = True):
         self.states = []
         self.root = LNode()
         self.node = self.root
+        self.parse_args = parse_args
 
         if isinstance(initstr, str):
             self.push(initstr)
@@ -235,6 +330,27 @@ class LTree(object):
         """Push strings into the tree structure"""
         if isinstance(instr, str):
             self.push(instr)
+        elif isinstance(instr, LNode):
+            node = instr
+            cpy = self.node.add_child(node.val)
+
+            child_iters = [(iter(node.get_childs()), cpy)]
+            last_node = node
+            is_last = False
+            while child_iters:
+                is_last = True
+                for child in child_iters[-1][0]:
+                    cpy_child = child_iters[-1][1].add_child(child.val)
+                    child_iters.append((iter(child.get_childs()), cpy_child))
+                    last_node = node
+                    is_last = False
+                    break
+
+                if is_last:
+                    child_iters.pop()
+
+            self.node = last_node
+
         return self
 
     def chop(self, **args):
@@ -321,76 +437,7 @@ class LTree(object):
         else:
             return self.root.to_string(True)
 
-class LNodeIterator(object):
-    """An iterator class to loop over LNodeItems"""
-    def __init__(self, first_node: LNode):
-        self.node = None
-        self.child_iter = [iter([first_node])]
-
-    def __iter__(self):
-        return self
-
-    def __next__(self):
-        """Go to next function in the string-space"""
-        while self.child_iter:
-            for self.node in self.child_iter[-1]:
-                self.child_iter.append(iter(self.node.get_childs()))
-                return self.node
-
-            self.child_iter.pop()
-
-        while not self.node.is_root():
-            itr = iter(self.node.predecessor.get_childs())
-            is_last = False
-            for node in itr:
-                if is_last:
-                    is_last = False
-                    self.node = node
-                    break
-                if node is self.node:
-                    is_last = True
-                    self.child_iter.append(itr)
-                    self.node = self.node.predecessor
-
-            if not is_last:
-                for self.node in self.child_iter[-1]:
-                    self.child_iter.append(iter(self.node.get_childs()))
-                return self.node
-
-
-            # for node in self.child_iter[-1]:
-            #     self.child_iter.append(iter(node.get_childs()))
-            #     return node
-
-            # last_node = self.child_iter.pop()
-
-        raise StopIteration
-
-        # TODO might be necessary to check if it's root
-        # and work the way up
-
-
-class LNodeUpIterator(object):
-    """Class to iterate backwards"""
-    def __init__(self, first_node: LNode, ignore: set, max_depth=-1, ):
-        self.node = first_node
-        self.max_depth = max_depth
-        self.ignore = ignore
-
-    def __iter__(self):
-        return self
-
-    def __next__(self):
-        self.node = self.node.predecessor
-        while self.node is not None and self.node.val in self.ignore:
-            self.node = self.node.predecessor
-
-        if self.node is None or self.max_depth is 0:
-            raise StopIteration
-        self.max_depth -= 1
-        return self.node
-
-class Rule(object):
+class LRule(object):
     """Class to handle rules and logics"""
     DETERMINISTIC_RULE = 0
     STOCHASTIC_RULE = (1 << 0)
@@ -411,6 +458,7 @@ class Rule(object):
         self.prob_rules = []
         self.cs = None  # Cummulative Sum
         self.functions = []
+        self.expressions = []
         self.cmp_type = None
         self.fn_str = None
         self.cmp_str = None
@@ -491,6 +539,21 @@ class Rule(object):
             cmp_str = funcstr[pos + len(cmp_type):]
             self.functions.append((fn_str, cmp_str, cmp_type))
 
+    def add_consequence(self, consequence):
+        """Add a consequence and prepare all expressions"""
+        nodes = (LTree(consequence)).chop()
+        itr = LNodeIterator(nodes)
+
+        conseq_expressions = []
+        for node in itr:
+            expressions = []
+            for expression in node.get_arguments():
+                expressions.append(Expression(expression))
+            conseq_expressions.append(expressions)
+        self.expressions.append(conseq_expressions)
+
+        self.prob_rules.append(consequence)
+
     def setup_consequences(self, consequences):
         """Setup the consequences"""
         if isinstance(consequences, dict):
@@ -503,13 +566,13 @@ class Rule(object):
                     rule = itr.next()
                     prob = consequences[rule]
                     self.cs.append(prob + self.cs[-1])
-                    self.prob_rules.append(rule)
+                    self.add_consequence(rule)
             except StopIteration:
                 pass
             self.cs[:] = [x / self.cs[-1] for x in self.cs]
 
         else:
-            self.prob_rules.append(consequences)
+            self.add_consequence(consequences)
 
     def trial(self, node):
         """Test if the node follows the rule. Returns True if it does,
@@ -697,7 +760,6 @@ class Rule(object):
         else:
             return False
 
-
 class LSystem(object):
     """Builder pattern to create a tree"""
     def __init__(self):
@@ -712,7 +774,7 @@ class LSystem(object):
     def set_figures(self, figures: dict):
         """Set figures, e.g.  figures = {'L':'','R':''}"""
         for law, conseq in figures.items():
-            self.figures.append(Rule(law, conseq))
+            self.figures.append(LRule(law, conseq))
         return self
 
     def set_ignore(self, ignore: str):
@@ -766,7 +828,7 @@ class LSystem(object):
                     conseq = conseq.replace(key + '(', value + '*')
                     conseq = conseq.replace(key, value)
                 print('conseq', conseq)
-            self.rules.append(Rule(law, conseq, self.ignore))
+            self.rules.append(LRule(law, conseq, self.ignore))
 
     def set_rules(self, rules):
         """Set rules for the lsystem e.g

@@ -73,6 +73,15 @@ class TreeTests(unittest.TestCase):
 
         self.assertEqual(nodes.to_string(True),'AABCD')
 
+    def test_insert_insert_iterator(self):
+        itree = LTree('')
+        A = LNode('A')
+        A.add_child('B').add_child('C').add_child('D')
+        itree << LNodeInsertIterator(A)
+        nodes = itree.chop()
+
+        self.assertEqual(nodes.to_string(True),'ABCD')
+
     def test_not_parse_arguments(self):
         itree = LTree('', False)
         itree = LTree('', False)

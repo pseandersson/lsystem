@@ -190,6 +190,6 @@ turtle = t.turtle_tree(itree, X0, R0, r0, stepsize, delta, dr)
 print('Done!')
 import pstats
 p = pstats.Stats('restats')
-p.sort_stats('cumulative').print_stats(10)
+p.sort_stats('cumulative').print_stats()
 
 draw_turtle(turtle)

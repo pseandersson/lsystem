@@ -45,7 +45,21 @@ class LNodeInsertIteratorTests(unittest.TestCase):
         for i in LNodeIterator(A):
             act_nodes.append(i.val)
         self.assertEqual(act_nodes, exp_nodes)
+    def test_simple_copying_deep_set_limit(self):
+        A = LNode('A')
+        B = LNode('B')
+        B.add_child('C').add_child('D')
+        lii = LNodeInsertIterator(B, A)
+        lii.set_limit(1)
+        for node in lii:
+            pass
 
+        exp_nodes = ['A', 'B']
+        act_nodes = []
+
+        for i in LNodeIterator(A):
+            act_nodes.append(i.val)
+        self.assertEqual(act_nodes, exp_nodes)
     def test_transfer_arguments_on_copy(self):
         expr = Expression('a^2')
         A =  LNode('A')
@@ -137,6 +151,7 @@ class LNodeInsertIteratorTests(unittest.TestCase):
             pass
         self.assertEqual(itr.get_begin_node().val, 'A')
         self.assertEqual(itr.get_end_node().val, 'C')
+
     def test_copy_into_new_access_template(self):
         """Test of copy to new operation"""
         A = LNode('A')
@@ -149,6 +164,7 @@ class LNodeInsertIteratorTests(unittest.TestCase):
         self.assertEqual(itr.get_begin_node().val, 'A')
         self.assertEqual(itr.get_end_node().val, 'C')
         self.assertEqual(count, 3)
+
     def test_copy_empty_nodes_to_new(self):
         """Test of copy to new operation"""
         A = LNode('A')
@@ -182,10 +198,52 @@ class LNodeInsertIteratorTests(unittest.TestCase):
         for a, b in itr:
             self.assertNotEqual(a, b)
             self.assertEqual(a, a)
-            pass
+
         self.assertEqual(itr.get_begin_node().val, '')
         self.assertEqual(itr.get_end_node().val, '')
         self.assertFalse(itr.get_begin_node().get_childs())
+
+    def test_set_target(self):
+        """Test of copy to existing target, by
+        using the set_target method"""
+        A = LNode('A')
+        A.set_arguments('123')
+        A.add_child('B').add_child('C')
+        itr = LNodeInsertIterator(A)
+        N = LNode('N')
+        itr.set_target(N)
+        count = 0
+        for a, b in itr:
+            pass
+
+        for n in LNodeIterator(N):
+            count += 1
+
+        self.assertEqual(itr.get_begin_node().val, 'A')
+        self.assertEqual(itr.get_end_node().val, 'C')
+        self.assertEqual(count, 4)
+
+    def test_set_kwargs(self):
+        """Test of copy to existing target, by
+        using the set_target method"""
+        A = LNode('A')
+        A.set_arguments('(a*4)')
+        A.add_child('B').add_child('C')
+        itr = LNodeInsertIterator(A, a=3.)
+        N = LNode('N')
+        itr.set_target(N)
+        itr.set_kwargs(a=7.)
+        count = 0
+        for a, b in itr:
+            pass
+
+        for n in LNodeIterator(N):
+            count += 1
+
+        self.assertEqual(itr.get_begin_node().val, 'A')
+        self.assertEqual(itr.get_begin_node().get_argument(0), 28)
+        self.assertEqual(itr.get_end_node().val, 'C')
+        self.assertEqual(count, 4)
 
 
 class LNodeIteratorTests(unittest.TestCase):

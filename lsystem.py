@@ -37,6 +37,7 @@ class LNode(object):
             return False
 
     def get_predecessor(self):
+        """Get the parent node"""
         return self.predecessor
 
     def set_arguments(self, args, to_expression=True):
@@ -48,14 +49,13 @@ class LNode(object):
                 self.arguments = args[1:-1].split(',')
         elif isinstance(args, (list, tuple)):
             self.arguments = args
-        elif isinstance(args, dict):
-            # TODO remove
-            for i in range(0, self.get_argument_count()):
-                arg_expr = self.get_argument(i)
-                for key, value in args.items():
-                    # arg_expr = arg_expr.replace(key + '(', value + '*(')
-                    arg_expr = arg_expr.replace(key, value)
-                self.arguments[i] = str(calculate(arg_expr))
+        # elif isinstance(args, dict):
+        #     for i in range(0, self.get_argument_count()):
+        #         arg_expr = self.get_argument(i)
+        #         for key, value in args.items():
+        #             # arg_expr = arg_expr.replace(key + '(', value + '*(')
+        #             arg_expr = arg_expr.replace(key, value)
+        #         self.arguments[i] = str(calculate(arg_expr))
 
     def has_arguments(self):
         """Evaluate if node has any arguments"""
@@ -312,22 +312,37 @@ class LNodeInsertIterator:
        the last node can be accessed with get_end_node()
     """
     def __init__(self, source, target=None, limit=-1, **kwargs):
-        if target is None:
-            self.first = LNode()
-        else:
-            if source.val is '':
-                self.first = target
-            else:
-                self.first = target
+        self.first_child = False
+        self.first = target or LNode()
         self.child_iters = [iter([source])]
         self.nodes = [self.first]
         self.node = self.first
         self.limit = limit
         self.kwargs = kwargs
 
+    def set_limit(self, limit):
+        """Restrict the iterator to only insert
+           limit number of nodes in the new graph"""
+        self.limit = limit
+
+    def set_kwargs(self, **kwargs):
+        """Defining the variables for"""
+        self.kwargs = kwargs
+
+    def set_target(self, target=None):
+        """Set a target so it could be iterating through
+           in another place"""
+        self.first_child = True
+        self.first = target or LNode()
+        self.nodes = [self.first]
+        self.node = self.first
+
     def get_begin_node(self):
         """Access the first newly added node"""
-        return self.first
+        if self.first_child and self.first.get_childs():
+            return self.first.get_childs()[-1]
+        else:
+            return self.first
 
     def get_end_node(self):
         """Access the end-point where new nodes could be append to"""
@@ -395,6 +410,11 @@ class LTree(object):
             self.push(instr)
         elif isinstance(instr, int):
             self.n_fetch_nodes = instr
+        elif isinstance(instr, LNodeInsertIterator):
+            instr.set_target(self.node)
+            for i in instr:
+                pass
+            self.node = instr.get_end_node()
         elif isinstance(instr, LNode):
             itr = LNodeInsertIterator(instr, self.node, self.n_fetch_nodes)
             for a in itr:
@@ -558,8 +578,7 @@ class LRule(object):
         self.key = (LTree('', False) << key_string[less_pos:great_pos]).chop()
 
         if self.flag & self.LOOK_BEFORE:
-            self.less = (
-                LTree() << key_string[0:less_pos - 1]).chop(make_depth=True)
+            self.less = (LTree() << key_string[0:less_pos - 1]).chop(make_depth=True)
 
         if self.flag & self.LOOK_AFTER:
             self.greater = (LTree() << key_string[great_pos + 1:]).chop()
@@ -665,7 +684,7 @@ class LRule(object):
             #	node.get_argument_count():
             #	return False
             for fn_str, cmp_str, cmp_opr in self.functions:
-                state = cmp_opr(fn_str(**arglist),cmp_str(**arglist))
+                state = cmp_opr(fn_str(**arglist), cmp_str(**arglist))
 
                 if not state:
                     break
@@ -675,11 +694,11 @@ class LRule(object):
     def return_rule(self, arglist: dict=None, rule_id=1):
         """Returning aCopy the protype with applyied
            argumentlist return"""
-        new_rule_itr = LNodeInsertIterator(self.prob_rules[rule_id -1], **(arglist or {}))
-        for n in new_rule_itr:
-            pass
+        return LNodeInsertIterator(self.prob_rules[rule_id -1], **(arglist or {}))
+        # for n in new_rule_itr:
+        #     pass
 
-        return new_rule_itr.get_begin_node()
+        # return new_rule_itr.get_begin_node()
 
 
     def try_case(self, case_str):

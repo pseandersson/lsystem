@@ -1,3 +1,7 @@
+"""
+Apologies for lot of comments, will clean this
+up in the future.
+"""
 from lsystem import lsystem as ls
 from lsystem import turtle as t
 import numpy as np

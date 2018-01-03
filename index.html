@@ -7,19 +7,19 @@
 
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
-    <link rel="stylesheet" type="text/css" href="main.css" />
+    <link rel="stylesheet" type="text/css" href="html/main.css" />
     <script type="text/javascript"
         src="https://cdn.rawgit.com/brython-dev/brython/3.3.5/www/src/brython.js">
     </script>
     <script type="text/javascript"
     src="https://cdn.rawgit.com/brython-dev/brython/3.3.5/www/src/brython_stdlib.js">
     </script>
-    <script type="text/javascript" src="dnd.js"></script>
+    <script type="text/javascript" src="html/dnd.js"></script>
     </head>
 <body onload="brython()">
 <!-- <script src="lsystem.py" type="text/python"></script> -->
 <script type="text/python">
-import lsystem as ls
+from lsystem import lsystem as ls
 from browser import document
 
 @document["compute"].bind("click")
@@ -37,10 +37,13 @@ def compute(ev):
     gen_item = document["gen"]
     generations = int(gen_item.options[gen_item.selectedIndex].value)
 
-    itree = ls.resolve_instructions_by_tree(instr, rules,
-            generations, definitions=define)
+    itree = bench_sys = ls.LSystem()\
+        .set_definitions(define)\
+        .set_rules(rules)\
+        .set_max_iterations(generations)\
+        .solve(instr)
+
     document["output"].value = itree.to_string()
-    #   print(itree.to_string())
 </script>
 <form>
 <h1>Initial Expression</h1>

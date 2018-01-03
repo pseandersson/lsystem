@@ -7,7 +7,7 @@
 
 from random import random as rand
 
-from lmath import calculate, Expression
+from lsystem.lmath import calculate, Expression
 
 class LNode(object):
     """LNode is a node in a tree graph representing one command in the Liedermayer system.
@@ -49,13 +49,6 @@ class LNode(object):
                 self.arguments = args[1:-1].split(',')
         elif isinstance(args, (list, tuple)):
             self.arguments = args
-        # elif isinstance(args, dict):
-        #     for i in range(0, self.get_argument_count()):
-        #         arg_expr = self.get_argument(i)
-        #         for key, value in args.items():
-        #             # arg_expr = arg_expr.replace(key + '(', value + '*(')
-        #             arg_expr = arg_expr.replace(key, value)
-        #         self.arguments[i] = str(calculate(arg_expr))
 
     def has_arguments(self):
         """Evaluate if node has any arguments"""

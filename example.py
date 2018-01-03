@@ -1,9 +1,9 @@
-import lsystem as ls
-import turtle as t
+from lsystem import lsystem as ls
+from lsystem import turtle as t
 import numpy as np
 import string
 import cProfile
-from lviewer import *
+from lsystem.lviewer import *
 
 figures = {'L': '', 'R': ''}
 

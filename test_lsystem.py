@@ -1,6 +1,6 @@
 import unittest
 from lsystem import LSystem
-
+import re
 
 class LSystemTests(unittest.TestCase):
     def test_zero_iterations(self):
@@ -40,7 +40,21 @@ class LSystemTests(unittest.TestCase):
                 'F(x,t):t>0': 'F(x,t-1)'
             })\
             .set_max_iterations(2)\
-            .solve('F(1,0)')
+            .solve('F(1,0)').chop().to_string(True, False, 1, True)
+
+        def F(**kwargs):
+            a = str(kwargs.get('x', '[\+\-\d.]+')).replace('.', '\.')
+            b = str(kwargs.get('t', '[\+\-\d.]+')).replace('.', '\.')
+            return "F\(" + a + "," + b + "\)"
+
+        rule_a_1 = F(t=2.0) + "\+" + F(t=1.0) + "\-\-" + F(t=1.0) + "\+" + F(t=0.0)
+        rule_a_2 = F(t=1.0) + "\+" + F(t=0.0) + "\-\-" + F(t=0.0) + "\+" + rule_a_1
+        exp_pattern = re.compile(rule_a_2)
+
+        print(res)
+
+        # self.assertEqual(res, exp_2)
+        self.assertTrue(exp_pattern.match(res))
 
     def test_logics(self):
         """Test heavily logic rules"""

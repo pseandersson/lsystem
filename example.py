@@ -185,11 +185,11 @@ cProfile.run('itree = bench_sys.solve(instr)', 'restats')
 #     .set_max_iterations(12)\
 #     .solve('F1F1F1')
 # itree = bench_sys.solve(instr)
-# turtle = t.turtle_tree(itree, X0, R0, r0, stepsize, delta, dr)
+turtle = t.turtle_tree(itree, X0, R0, r0, stepsize, delta, dr)
 # print(itree.to_string())
 print('Done!')
 import pstats
 p = pstats.Stats('restats')
 p.sort_stats('cumulative').print_stats(10)
-exit()
-# draw_turtle(turtle)
+
+draw_turtle(turtle)

@@ -23,83 +23,15 @@ class Operator:
 
         if isinstance(rhs, str):
             rhs = kwargs[rhs]
-        elif isinstance(rhs, Operator):
+        if isinstance(rhs, (Operator, Expression)):
             rhs = rhs(**kwargs)
 
         if isinstance(lhs, str):
             lhs = kwargs[lhs]
-        elif isinstance(lhs, Operator):
+        if isinstance(lhs, (Operator, Expression)):
             lhs = lhs(**kwargs)
 
-
         return self.opr(lhs, rhs)
-
-
-# class OpAdd(Operator):
-#     """Add operator"""
-
-#     def __init__(self, val):
-#         super().__init__(val, float.__add__)
-
-
-# class OpSubtract(Operator):
-#     """Subtract operator"""
-
-#     def __init__(self, val):
-#         super().__init__(val)
-
-#     def __call__(self, *args, **kwargs):
-#         if isinstance(args[0], str):
-#             return self.val - kwargs[args[0]]
-#         return self.val - args[0]
-
-
-# class OpMultiply(Operator):
-#     """Multiply operator"""
-
-#     def __init__(self, val):
-#         super().__init__(val)
-
-#     def __call__(self, *args, **kwargs):
-#         if isinstance(args[0], str):
-#             return self.val * kwargs[args[0]]
-#         return self.val * args[0]
-
-
-# class OpDivide(Operator):
-#     """Divide operator"""
-
-#     def __init__(self, val):
-#         super().__init__(val)
-
-#     def __call__(self, *args, **kwargs):
-#         if isinstance(args[0], str):
-#             return self.val / kwargs[args[0]]
-#         return self.val / args[0]
-
-
-# class OpPower(Operator):
-#     """Power operator"""
-
-#     def __init__(self, val):
-#         super().__init__(val)
-
-#     def __call__(self, *args, **kwargs):
-#         if isinstance(args[0], str):
-#             return pow(self.val, kwargs[args[0]])
-#         return pow(self.val, args[0])
-
-
-# class OpMin(Operator):
-#     """Min operator"""
-
-#     def __init__(self, val):
-#         super().__init__(val)
-
-#     def __call__(self, *args, **kwargs):
-#         if isinstance(args[0], str):
-#             return min(self.val, kwargs[args[0]])
-#         return min(self.val, args[0])
 
 
 def calculate(instr):
@@ -219,10 +151,14 @@ def calculate(instr):
 
 
 class Expression:
+    """Class to evaluate a generic expression"""
     def __init__(self, expr):
         self.__operator = self.__derive(expr)
 
     def is_constant(self):
+        """Returns true if the operator is a constant
+           expression
+        """
         return isinstance(self.__operator, float)
 
     def __call__(self, **kwargs):
@@ -278,15 +214,15 @@ class Expression:
                     val_str += instr[i]
                 # Capture the variable name
                 elif instr[i] in VARIABLES and not val_str:
-                    lvalue = instr[i]
+                    val_str += instr[i]
                 # Otherwise try to resolve the value
                 else:
                     if val_str:
                         try:
                             lvalue = float(val_str)
-                            val_str = ''
                         except ValueError:
                             lvalue = val_str
+                        val_str = ''
 
                     # bracket values are returned in the
                     # next loop of the string so it has

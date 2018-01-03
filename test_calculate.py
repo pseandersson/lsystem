@@ -1,7 +1,10 @@
+"""
+Tests for expressions and calculate
+"""
 import unittest
-# OpAdd, OpDivide, OpMin, OpMultiply, OpPower, OpSubtract
-from lmath import calculate, Expression, Operator
+
 from random import choice, uniform
+from lmath import calculate, Expression, Operator
 
 
 class TestExpression(unittest.TestCase):
@@ -10,10 +13,27 @@ class TestExpression(unittest.TestCase):
         expr = Expression('a+1')
         self.assertEqual(expr(a=1.), 2)
 
+    def test_subtract(self):
+        """Test a simple expression"""
+        expr = Expression('t-1')
+        self.assertEqual(expr(t=3.), 2)
+
     def test_mul(self):
         """Test a simple linear expression"""
         expr = Expression('5*a+2')
         self.assertEqual(expr(a=2.), 12)
+
+
+    def test_pow(self):
+        """Test a simple linear expression"""
+        expr = Expression('a^2')
+        self.assertEqual(expr(a=3.), 9)
+
+    def test_passing_vars(self):
+        expr = Expression('a^2')
+        def fn(in_expr, **kwargs):
+            return in_expr(**kwargs)
+        self.assertEqual(fn(expr, a=3), 9)
 
     def test_constant_expression(self):
         """Test a constant expression e.g 5*3 + 1"""

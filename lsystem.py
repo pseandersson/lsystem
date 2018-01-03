@@ -31,17 +31,25 @@ class LNode(object):
     def __eq__(self, b):
         if isinstance(b, str):
             return self.val == b
+        elif isinstance(b, LNode):
+            return id(self) == id(b)
         else:
-            return NotImplemented
+            return False
 
     def get_predecessor(self):
         return self.predecessor
 
-    def set_arguments(self, args):
+    def set_arguments(self, args, to_expression=True):
         """set_arguments of node"""
         if isinstance(args, str):
-            self.arguments = args[1:-1].split(',')
+            if to_expression:
+                self.arguments = [Expression(arg) for arg in args[1:-1].split(',')]
+            else:
+                self.arguments = args[1:-1].split(',')
+        elif isinstance(args, (list, tuple)):
+            self.arguments = args
         elif isinstance(args, dict):
+            # TODO remove
             for i in range(0, self.get_argument_count()):
                 arg_expr = self.get_argument(i)
                 for key, value in args.items():
@@ -51,7 +59,7 @@ class LNode(object):
 
     def has_arguments(self):
         """Evaluate if node has any arguments"""
-        return len(self.arguments) > 0
+        return bool(self.arguments)
 
     def get_argument(self, index):
         """get_argument at position index"""
@@ -91,10 +99,20 @@ class LNode(object):
         """Access all childrens"""
         return self.childs
 
-    def add_child(self, val):
+    def add_child(self, val, *args, **kwargs):
         """Add a new command val as child to current node"""
-        self.childs.append(LNode(val, self))
-        # self.increase_descendants()
+        node = LNode(val, self)
+        if args:
+            if kwargs:
+                for arg in args:
+                    if isinstance(arg, Expression):
+                        node.arguments.append(arg(**kwargs))
+                    else:
+                        node.arguments.append(arg)
+            else:
+                node.set_arguments(args)
+
+        self.childs.append(node)
         return self.childs[-1]
 
     def is_branch(self):
@@ -191,13 +209,13 @@ class LNode(object):
                     return self.next_at_parent()
 
 
-    def to_string(self, traverse=False, newline=False, indent=1):
+    def to_string(self, traverse=False, newline=False, indent=1, print_args=True):
         """Returns the string, building up the node-scheme"""
         tstr = self.val
-        if self.has_arguments():
+        if self.has_arguments() and print_args:
             tstr += '('
             for i in range(0, self.get_argument_count()):
-                tstr += self.get_argument(i)
+                tstr += str(self.get_argument(i))
                 if i < self.get_argument_count() - 1:
                     tstr += ','
                 else:
@@ -205,10 +223,10 @@ class LNode(object):
         if traverse:
             if newline:
                 for node in self.childs:
-                    tstr += '\n' +  ' '*indent + str(node.to_string(traverse, newline, indent+1))
+                    tstr += '\n' +  ' '*indent + str(node.to_string(traverse, newline, indent+1, print_args))
             else:
                 for node in self.childs:
-                    tstr += str(node.to_string(traverse))
+                    tstr += str(node.to_string(traverse, newline, indent, print_args))
         return tstr
 
 
@@ -284,30 +302,74 @@ class LNodeUpIterator(object):
         return self.node
 
 class LNodeInsertIterator:
-    """An iterator class which enabling insert a copy of
-       an other node(s) or node-tree into a existing tree.
+    """An iterator class which enabling insert a copy or copy
+       an other node(s) or node-tree into a new or existing tree.
        At each iteration, one can customize each individually
-       e.g. applying arguments expressions"""
-    def __init__(self, target, source):
-        self.node = target
-        self.child_iters = [(iter(source.get_childs()), target.add_child(source.val))]
+       e.g. applying arguments expressions.
+
+       After iterating through the nodes one can access the
+       beginning of the new node with get_begin_node() also
+       the last node can be accessed with get_end_node()
+    """
+    def __init__(self, source, target=None, limit=-1, **kwargs):
+        if target is None:
+            self.first = LNode()
+        else:
+            if source.val is '':
+                self.first = target
+            else:
+                self.first = target
+        self.child_iters = [iter([source])]
+        self.nodes = [self.first]
+        self.node = self.first
+        self.limit = limit
+        self.kwargs = kwargs
+
+    def get_begin_node(self):
+        """Access the first newly added node"""
+        return self.first
 
     def get_end_node(self):
+        """Access the end-point where new nodes could be append to"""
         return self.node
 
     def __iter__(self):
         return self
 
     def __next__(self):
-        while self.child_iters:
-            for self.node in self.child_iters[-1][0]:
-                self.child_iters.append(\
-                    (iter(self.node.get_childs()),\
-                     self.child_iters[-1][1].add_child(self.node.val)))
-                self.node = self.child_iters[-1][1]
-                return self.child_iters[-1][1]
+        while self.child_iters and self.limit:
+            child_iter = self.child_iters[-1]
+            for node in child_iter:
+                if node.get_childs():
+                    self.child_iters.append(iter(node.get_childs()))
+                if node.val is '':
+                    self.nodes.append(self.node)
+                else:
+                    self.node = self.nodes[-1].add_child(node.val, *node.arguments, **self.kwargs)
+                    if node.get_childs():
+                        self.nodes.append(self.node)
+                    if self.limit > 0:
+                        self.limit -= 1
+                    return self.node, node
+            if child_iter is self.child_iters[-1]:
+                self.child_iters.pop()
+                self.nodes.pop()
 
-            self.child_iters.pop()
+        # Make sure, iff possible, remove the first empty value
+        if self.first.val is '' and len(self.first.get_childs()) is 1:
+            self.first = self.first.get_childs()[0]
+
+        # Make sure that we end up, before any branches starts
+        # or as high up as possible
+        if self.node.val is ']' and self.node.predecessor:
+            branch_count = 1
+            self.node = self.node.predecessor
+            while branch_count > 0 and self.node.predecessor:
+                if self.node.val is '[':
+                    branch_count -= 1
+                elif self.node.val is ']':
+                    branch_count += 1
+                self.node = self.node.predecessor
 
         raise StopIteration
 
@@ -317,40 +379,28 @@ class LTree(object):
     function. The chop()-function gives access to the nodes and remove
     their relationship to LTree so new trees can grow up there"""
 
-    def __init__(self, initstr=None, parse_args = True):
+    def __init__(self, initstr=None, parse_args=True):
         self.states = []
         self.root = LNode()
         self.node = self.root
         self.parse_args = parse_args
+        self.n_fetch_nodes = -1
 
         if isinstance(initstr, str):
             self.push(initstr)
 
     def __lshift__(self, instr):
-        """Push strings into the tree structure"""
+        """Push strings or nodes into the tree structure"""
         if isinstance(instr, str):
             self.push(instr)
+        elif isinstance(instr, int):
+            self.n_fetch_nodes = instr
         elif isinstance(instr, LNode):
-            node = instr
-            cpy = self.node.add_child(node.val)
-
-            child_iters = [(iter(node.get_childs()), cpy)]
-            last_node = node
-            is_last = False
-            while child_iters:
-                is_last = True
-                for child in child_iters[-1][0]:
-                    cpy_child = child_iters[-1][1].add_child(child.val)
-                    child_iters.append((iter(child.get_childs()), cpy_child))
-                    last_node = node
-                    is_last = False
-                    break
-
-                if is_last:
-                    child_iters.pop()
-
-            self.node = last_node
-
+            itr = LNodeInsertIterator(instr, self.node, self.n_fetch_nodes)
+            for a in itr:
+                pass
+            self.node = itr.get_end_node()
+            self.n_fetch_nodes = -1
         return self
 
     def chop(self, **args):
@@ -404,7 +454,7 @@ class LTree(object):
                     if bracket_count == 0:
                         break
                     i += 1
-                self.node.set_arguments(instr[bracket_start_pos:i + 1])
+                self.node.set_arguments(instr[bracket_start_pos:i + 1], self.parse_args)
             elif instr[i] == '[':
                 self.states.append(self.node)
                 self.node = self.node.add_child(instr[i])
@@ -432,10 +482,10 @@ class LTree(object):
             self.root.print_tree()
 
     def to_string(self):
-        if len(self.root.childs) == 1:
-            return self.root.childs[0].to_string(True)
-        else:
-            return self.root.to_string(True)
+        s = ''
+        for node in LNodeIterator(self.root):
+            s += node.to_string()
+        return s
 
 class LRule(object):
     """Class to handle rules and logics"""
@@ -449,7 +499,7 @@ class LRule(object):
     BRACKET_ERROR = (1 << 4)
     FUNC_DEF = (1 << 5)
 
-    def __init__(self, initstr, consequences, ignore= set()):
+    def __init__(self, initstr, consequences, ignore: set=None):
         self.flag = 0
         self.key = None
         self.less = None
@@ -462,8 +512,7 @@ class LRule(object):
         self.cmp_type = None
         self.fn_str = None
         self.cmp_str = None
-        self.ignore = ignore
-        self.back_ignore = ignore.union('[')
+        self.ignore = ignore or set()
         self.type = self.DETERMINISTIC_RULE
 
         self.setup_case(initstr)
@@ -503,8 +552,10 @@ class LRule(object):
             key_string = initstr[0:i]
         else:
             key_string = initstr
-
-        self.key = (LTree() << key_string[less_pos:great_pos]).chop()
+        # TODO Assumes only one function e.g. F(x,t)
+        # in future multiple keys should be supported
+        # e.g. F(x,t)G(y,t)
+        self.key = (LTree('', False) << key_string[less_pos:great_pos]).chop()
 
         if self.flag & self.LOOK_BEFORE:
             self.less = (
@@ -519,40 +570,30 @@ class LRule(object):
     def setup_func(self, funcstr):
         """Set up the functions using during comparison"""
         funcstrs = funcstr.split('&&')
+        ### TODO Expand Expresssions to handle all this
         for fnstr in funcstrs:
-            cmp_type = ''
+            cmp_type = '', None
             if '<=' in funcstr:
-                cmp_type = '<='
+                cmp_type = '<=', float.__le__
             elif '>=' in funcstr:
-                cmp_type = '>='
+                cmp_type = '>=', float.__ge__
             elif '==' in funcstr:
-                cmp_type = '=='
+                cmp_type = '==', float.__eq__
             elif '!=' in funcstr:
-                cmp_type = '!='
+                cmp_type = '!=', float.__ne__
             elif '<' in funcstr:
-                cmp_type = '<'
+                cmp_type = '<', float.__lt__
             elif '>' in funcstr:
-                cmp_type = '>'
+                cmp_type = '>', float.__gt__
 
-            pos = fnstr.find(cmp_type)
+            pos = fnstr.find(cmp_type[0])
             fn_str = funcstr[0:pos]
-            cmp_str = funcstr[pos + len(cmp_type):]
-            self.functions.append((fn_str, cmp_str, cmp_type))
+            cmp_str = funcstr[pos + len(cmp_type[0]):]
+            self.functions.append((Expression(fn_str), Expression(cmp_str), cmp_type[1]))
 
     def add_consequence(self, consequence):
         """Add a consequence and prepare all expressions"""
-        nodes = (LTree(consequence)).chop()
-        itr = LNodeIterator(nodes)
-
-        conseq_expressions = []
-        for node in itr:
-            expressions = []
-            for expression in node.get_arguments():
-                expressions.append(Expression(expression))
-            conseq_expressions.append(expressions)
-        self.expressions.append(conseq_expressions)
-
-        self.prob_rules.append(consequence)
+        self.prob_rules.append((LTree(consequence)).chop())
 
     def setup_consequences(self, consequences):
         """Setup the consequences"""
@@ -597,17 +638,6 @@ class LRule(object):
                     bf_node = lnode
             except StopIteration:
                 return False, None
-            # if node.is_root() or self.less.depth is 0:
-            #     return False, None
-            # itr = LNodeUpIterator(node, self.back_ignore, self.less.depth)
-            # lnode = node
-            # for inode in itr:
-            #     lnode = inode
-
-            # if lnode is None or not self.match(lnode, self.less):
-            #     return False, None
-            # else:
-            #     bf_node = lnode
 
         if self.flag & self.LOOK_AFTER:
             try:
@@ -619,8 +649,7 @@ class LRule(object):
                 return False, None
 
         # Create argument list
-        arglist = dict()
-        self.parse_arguments(self.key, node, arglist)
+        arglist = dict(zip(self.key.get_arguments(), node.get_arguments()))
 
         if bf_node:
             self.match(bf_node, self.less, arglist)
@@ -635,44 +664,23 @@ class LRule(object):
             # if self.key.get_argument_count()!=\
             #	node.get_argument_count():
             #	return False
-            for fn_str, cmp_str, cmp_type in self.functions:
-                for i in range(self.key.get_argument_count()):
-                    fn_str = fn_str.replace(self.key.get_argument(i),
-                                            node.get_argument(i))
-                    cmp_str = cmp_str.replace(self.key.get_argument(i),
-                                              node.get_argument(i))
-
-                if cmp_type == '<=':
-                    state = calculate(fn_str) <= calculate(cmp_str)
-                elif cmp_type == '>=':
-                    state = calculate(fn_str) >= calculate(cmp_str)
-                elif cmp_type == '==':
-                    state = calculate(fn_str) == calculate(cmp_str)
-                elif cmp_type == '!=':
-                    state = calculate(fn_str) != calculate(cmp_str)
-                elif cmp_type == '<':
-                    state = calculate(fn_str) < calculate(cmp_str)
-                elif cmp_type == '>':
-                    state = calculate(fn_str) > calculate(cmp_str)
+            for fn_str, cmp_str, cmp_opr in self.functions:
+                state = cmp_opr(fn_str(**arglist),cmp_str(**arglist))
 
                 if not state:
                     break
 
         return state, arglist
 
-    def return_rule(self, arglist=None, rule_id=1):
-        rule = LTree(self.prob_rules[rule_id - 1])
-        if isinstance(arglist, dict):
-            node = rule.first()
-            while True:
-                node.set_arguments(arglist)
-                try:
-                    node = node.next()
-                except StopIteration:
-                    break
-            return rule.to_string()
-        else:
-            return rule.to_string()
+    def return_rule(self, arglist: dict=None, rule_id=1):
+        """Returning aCopy the protype with applyied
+           argumentlist return"""
+        new_rule_itr = LNodeInsertIterator(self.prob_rules[rule_id -1], **(arglist or {}))
+        for n in new_rule_itr:
+            pass
+
+        return new_rule_itr.get_begin_node()
+
 
     def try_case(self, case_str):
         """Test if the string follows the given rule, if it does
@@ -699,7 +707,7 @@ class LRule(object):
         """Internal method to parse arguments"""
         for i in range(0, a.get_argument_count()):
             if not a.get_argument(i) in d.keys():
-                d[a.get_argument(i)] = b.get_argument(i)
+                d[a.get_argument(i)] = float(b.get_argument(i))
             else:
                 print('Argument error')
 
@@ -858,13 +866,14 @@ class LSystem(object):
 
             for rule in rules:
                 new_str = rule.try_case(node)
-                if new_str != None:
+                if new_str:
+                    self.itree << new_str
                     break
 
-            if new_str != None:
-                self.itree << new_str
-            else:
-                self.itree << node.to_string()
+            if not new_str:
+                n = LNode(node.val)
+                n.set_arguments(node.get_arguments())
+                self.itree << 1 << n
 
     def solve(self, instr):
         if isinstance(instr, str):

@@ -2,8 +2,8 @@
 Tests for the LNode Item
 """
 import unittest
-from lsystem import LNode
-from lmath import Expression
+from lsystem.lsystem import LNode
+from lsystem.lmath import Expression
 
 class LNodeTests(unittest.TestCase):
 

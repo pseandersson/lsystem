@@ -4,8 +4,7 @@ Tests for expressions and calculate
 import unittest
 
 from random import choice, uniform
-from lmath import calculate, Expression, Operator
-
+from lsystem.lmath import calculate, Expression, Operator
 
 class TestExpression(unittest.TestCase):
     def test_add(self):

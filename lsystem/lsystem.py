@@ -1,13 +1,13 @@
 """
 // ================================== \\
-  Copyright (C) 2016 Patrik Andersson
+  Copyright (C) 2017 Patrik Andersson
           All rights reserved
 \\=================================== //
 """
 
 from random import random as rand
 
-from lsystem.lmath import calculate, Expression
+from lsystem.lmath import calculate, Expression, __EQ__, __NE__
 
 class LNode(object):
     """LNode is a node in a tree graph representing one command in the Liedermayer system.
@@ -234,21 +234,29 @@ class LNode(object):
 class LNodeIterator(object):
     """An iterator class to loop over LNodeItems"""
     def __init__(self, first_node: LNode):
+        # __debugger__
         self.node = None
+        # __debugger__
         self.child_iter = [iter([first_node])]
+        # __debugger__
 
     def __iter__(self):
         return self
 
     def __next__(self):
         """Go to next function in the string-space"""
+        # __debugger__
         while self.child_iter:
-            for self.node in self.child_iter[-1]:
+            # __debugger__
+            for node in self.child_iter[-1]:
+                self.node = node
+                # __debugger__
                 self.child_iter.append(iter(self.node.get_childs()))
+                # __debugger__
                 return self.node
 
             self.child_iter.pop()
-
+            # __debugger__
         # This code is to force the iterator to continue if
         # the initial item is in the middle of the tree.
         while not self.node.is_root():
@@ -590,9 +598,9 @@ class LRule(object):
             elif '>=' in funcstr:
                 cmp_type = '>=', float.__ge__
             elif '==' in funcstr:
-                cmp_type = '==', float.__eq__
+                cmp_type = '==', __EQ__
             elif '!=' in funcstr:
-                cmp_type = '!=', float.__ne__
+                cmp_type = '!=', __NE__
             elif '<' in funcstr:
                 cmp_type = '<', float.__lt__
             elif '>' in funcstr:
@@ -630,6 +638,7 @@ class LRule(object):
     def trial(self, node):
         """Test if the node follows the rule. Returns True if it does,
         otherwise False."""
+        # __debugger__
         bf_node = None
         af_node = None
 
@@ -677,8 +686,11 @@ class LRule(object):
             #	node.get_argument_count():
             #	return False
             for fn_str, cmp_str, cmp_opr in self.functions:
-                state = cmp_opr(fn_str(**arglist), cmp_str(**arglist))
+                print('x:',fn_str(**arglist), 'y:', cmp_str(**arglist))
 
+
+                state = cmp_opr(float(fn_str(**arglist)), float(cmp_str(**arglist)))
+                print('state:', state)
                 if not state:
                     break
 
@@ -871,18 +883,22 @@ class LSystem(object):
         """Private method solve the L-System for one iteration
               rules     - could be self.rules or the self.figures
         """
-        node = self.itree.chop()
-        itr = LNodeIterator(node)
+        itr = LNodeIterator(self.itree.chop())
+        # __debugger__
         for node in itr:
+            # __debugger__
             new_str = None
-
+            # __debugger__
             for rule in rules:
+                # __debugger__
                 new_str = rule.try_case(node)
                 if new_str:
+                    print('New Str')
                     self.itree << new_str
                     break
-
+            # __debugger__
             if not new_str:
+                # __debugger__
                 n = LNode(node.val)
                 n.set_arguments(node.get_arguments())
                 self.itree << 1 << n

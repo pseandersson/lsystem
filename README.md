@@ -16,4 +16,4 @@ The python scripts is found in the lsystem folder and its corresponding tests ar
 
 _example.py_ contains multiple set of rules and pattern, demonstrating usage of the entire library. _There are a lot of commented lines!!!_
 
-_index.html_ is a web page meant to be a intuitive user interface where one could learn programming in a playful way. It uses __Brython__ in order to call the python script(currently broken)
+_index.html_ is a web page meant to be a intuitive user interface where one could learn programming in a playful way. It uses __Brython__ in order to call the python script.

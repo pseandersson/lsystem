@@ -1,6 +1,6 @@
 """
 // ================================== \\
-  Copyright (C) 2016 Patrik Andersson
+  Copyright (C) 2017 Patrik Andersson
           All rights reserved
 \\=================================== //
 """
@@ -9,12 +9,43 @@ MATH_OP = set('+-*/^v')
 VARIABLES = set('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ')\
                 .difference(MATH_OP).difference('e')
 
+# Brython does not support the float.__eq__(a,b) nor
+#  float.__ne__(a,b) yet therefor we have to do
+# wrap it to the global scope which then could
+# be used in the rules
+
+__EQ__ = float.__eq__
+__NE__ = float.__ne__
+
+def Brython__EQ__(a, b):
+    """Wrapper method for float.__eq__(a, b)
+    for Brython"""
+    return a == b
+
+def Brython__NE__(a, b):
+    """Wrapper method for float.__ne__(a, b)
+    for Brython"""
+    return a != b
+
+try:
+    import browser
+    if browser:
+        __EQ__ = Brython__EQ__
+        __NE__ = Brython__NE__
+except:
+    pass
+
+# Below follows proper code
+
 class Operator:
     """Base class for operators"""
     def __init__(self, lhs, rhs, opr):
         self.lhs = lhs
         self.rhs = rhs
         self.opr = opr
+
+    def __str__(self):
+        return '(' + str(self.lhs) + ' ' + self.opr + ' ' + str(self.rhs) + ')'
 
     def __call__(self, **kwargs):
         """Take some input arguments and return a result"""
@@ -154,6 +185,9 @@ class Expression:
     """Class to evaluate a generic expression"""
     def __init__(self, expr):
         self.__operator = self.__derive(expr)
+
+    def __str__(self):
+        return str(self.__operator)
 
     def is_constant(self):
         """Returns true if the operator is a constant

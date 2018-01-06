@@ -1,6 +1,6 @@
 import unittest
-from lsystem import LNode, LNodeIterator, LNodeInsertIterator
-from lmath import Expression
+from lsystem.lsystem import LNode, LNodeIterator, LNodeInsertIterator
+from lsystem.lmath import Expression
 
 class LNodeInsertIteratorTests(unittest.TestCase):
     def test_simple_copying(self):

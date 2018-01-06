@@ -9,10 +9,10 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
     <link rel="stylesheet" type="text/css" href="html/main.css" />
     <script type="text/javascript"
-        src="https://cdn.rawgit.com/brython-dev/brython/3.3.5/www/src/brython.js">
+        src="https://cdn.rawgit.com/brython-dev/brython/3.4.0/www/src/brython.js">
     </script>
     <script type="text/javascript"
-    src="https://cdn.rawgit.com/brython-dev/brython/3.3.5/www/src/brython_stdlib.js">
+    src="https://cdn.rawgit.com/brython-dev/brython/3.4.0/www/src/brython_stdlib.js">
     </script>
     <script type="text/javascript" src="html/dnd.js"></script>
     </head>
@@ -24,15 +24,28 @@ from browser import document
 
 @document["compute"].bind("click")
 def compute(ev):
+    __debugger__
+    fn = float.__eq__
+    b = fn(1.0,1.0)
+    print('bool:', b)
+    #__debugger__
     instr=document['instr'].value
+    l = dict(zip(['a','b','c'],[1,2,3]))
+    for d in document.select(".variable"):
+        document["output"].value += "d:" + d.value + "\n"
+
+    for e in document.select(".expression"):
+        document["output"].value += ", e:" + e.value + "\n"
 
     define = {}
     for d, e in zip(document.select(".variable"), document.select(".expression")):
-        define[d.value] = e.value;
+        document["output"].value += "d:" + d.value + ", e:" + e.value + "\n"
+        define.update({d.value:e.value});
 
     rules = {}
     for p, r in zip(document.select(".pattern"), document.select(".replace")):
-        rules[p.value] = r.value;
+        rules.update({p.value:r.value});
+        #rules[p.value] = r.value;
 
     gen_item = document["gen"]
     generations = int(gen_item.options[gen_item.selectedIndex].value)

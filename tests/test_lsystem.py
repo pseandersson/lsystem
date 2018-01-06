@@ -1,5 +1,5 @@
 import unittest
-from lsystem import LSystem
+from lsystem.lsystem import LSystem
 import re
 
 class LSystemTests(unittest.TestCase):

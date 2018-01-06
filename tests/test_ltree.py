@@ -1,6 +1,6 @@
 import unittest
-from lsystem import LNode, LTree, LNodeIterator, LNodeInsertIterator
-from lmath import Expression
+from lsystem.lsystem import LNode, LTree, LNodeIterator, LNodeInsertIterator
+from lsystem.lmath import Expression
 
 class TreeTests(unittest.TestCase):
     def test_with_branches(self):
